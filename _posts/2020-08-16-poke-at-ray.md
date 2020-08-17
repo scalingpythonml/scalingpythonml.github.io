@@ -31,7 +31,7 @@ The ray-project looks really interesting. Along with Dask and other new Python-f
 
 You can also follow along with my streams around [distributed computing and open-source on my YouTube channel](https://www.youtube.com/user/holdenkarau). The two videos for this post are [Installing & Poking at Ray](https://www.youtube.com/watch?v=WBNmF-wyAlE) and [Trying the Ray Project on Kubernetes](https://www.youtube.com/watch?v=IUI5okVvgbQ).
 
-If your interested in learning more about Ray and don't want to wait for me, there is a [great collection of tutorials in the project](https://github.com/ray-project/tutorial/pull/173).
+If your interested in learning more about Ray and don't want to wait for me, there is a [great collection of tutorials in the project](https://github.com/ray-project/).
 
 [^lab]: Well… same-ish. It's technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you'll notice a lot of overlap.
 
