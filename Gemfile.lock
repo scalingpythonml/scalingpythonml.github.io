@@ -253,6 +253,7 @@ DEPENDENCIES
   faraday (< 1.0)
   github-pages
   jekyll-feed (~> 0.12)
+  jekyll-github-metadata
   jekyll-octicons
   minima (~> 2.5)
   tzinfo (~> 1.2)
