@@ -6,7 +6,7 @@ This blog does not represent any of my employers, past or present, and does not 
 
 ## Installing Ray
 
-Installing Ray was fairly simple, especially due to its lack of JVM dependencies. The one weird thing I encountered while I was installing Ray is he fact that its developers decided to "vendor" Apache Arrow. This was disappointing because I'm interested in using Arrow to get some of these tools to play together and vendored libraries could make it a bit harder. I filed an issue with the ray-project folks, and they quickly responded that they were working on it and then resolved it, so this is something I want to come back to.
+[Installing Ray](https://docs.ray.io/en/latest/installation.html) was fairly simple, especially due to its lack of JVM dependencies. The one weird thing I encountered while I was installing Ray is the fact that its developers decided to "vendor" Apache Arrow. This was disappointing because I'm interested in using Arrow to get some of these tools to play together and vendored libraries could make it a bit harder. I filed an issue with the ray-project folks, and they quickly responded that they were working on it and then resolved it, so this is something I want to come back to.
 
 ## Running Ray on K8s
 
