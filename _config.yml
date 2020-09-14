@@ -10,9 +10,10 @@ title: Scaling Python ML
 description: Blog of my adventures working with different tools for scaling Python ML workloads.
 github_username: scalingpythonml
 
-# Email and twitter are optional:
+# Optional social contact info
 email: holden@pigscanfly.ca
 twitter_username: holdenkarau
+youtube_username: holdenkarau
 
 # Set this to true to get LaTeX math equation support
 use_math:
