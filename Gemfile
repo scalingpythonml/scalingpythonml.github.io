@@ -2,6 +2,7 @@ source "https://rubygems.org"
 # Hello! This is where you manage which Jekyll version is used to run.
 # When you want to use a different version, change it below, save the
 # file and run `bundle install`. Run Jekyll with `bundle exec`, like so:
+# Note: you probably want to set a local bundle path with : /usr/local/bin/bundle config set path 'vendor/bundle'
 #
 #     bundle exec jekyll serve
 #
@@ -31,4 +32,3 @@ end
 gem "wdm", "~> 0.1.1", :install_if => Gem.win_platform?
 
 gem "faraday", "< 1.0"
-
