@@ -16,7 +16,10 @@ After running the rack for about a day, I got a complaint from my neighbor about
 
 ## The Hosts
 
-The hosts themselves are a mixture of machines. I picked up three [Rasberry Pi 4Bs](https://www.raspberrypi.org/products/raspberry-pi-4-model-b/) and scrounged up some of the free flash drives I've gotten from conferences over the years to act as storage and limited power compute. I'm also running a Jetson Nano and three Jetson AGX Xavier's to allow me to experiment with GPU acceleration. To support any x86 code, I also have a small refurbed x86 present.
+The hosts themselves are a mixture of machines. I picked up three [Rasberry Pi 4Bs](https://www.raspberrypi.org/products/raspberry-pi-4-model-b/). I'm also running a [Jetson Nano](https://amzn.to/3kBFG6c) and three [Jetson AGX Xavier's](https://amzn.to/3jzO58O) to allow me to experiment with GPU acceleration. To support any x86 only code, I also have a small refurbed x86 present.
+
+
+For storage I scrounged up some of the free flash drives I've gotten from conferences over the years to act as storage. This initial set up was not very fast, so I added some inexpensive on-sale external SSD drives.
 
 ## Setting up Kubernetes
 
