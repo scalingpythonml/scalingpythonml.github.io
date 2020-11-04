@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-11-04T03:24:53+00:00</updated><id>/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00+00:00</published><updated>2020-11-03T00:00:00+00:00</updated><id>/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-11-03T19:26:46-08:00</updated><id>/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00-08:00</published><updated>2020-11-03T00:00:00-08:00</updated><id>/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
 &lt;div class=&quot;sectionbody&quot;&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
 &lt;p&gt;After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are &lt;a href=&quot;https://github.com/dask/dask-kubernetes&quot;&gt;das-kubernetes&lt;/a&gt; and &lt;a href=&quot;https://github.com/dask/dask-docker&quot;&gt;dask-docker&lt;/a&gt; projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).&lt;/p&gt;
@@ -16,18 +16,18 @@
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;FROM debian:buster-slim
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; debian:buster-slim&lt;/span&gt;
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:$PATH
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; LANG=C.UTF-8 LC_ALL=C.UTF-8&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH /opt/conda/bin:$PATH&lt;/span&gt;
 
-RUN apt-get update --fix-missing &amp;amp;&amp;amp; \
-    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;amp;&amp;amp; \
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; apt-get update --fix-missing &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
     apt-get clean
 
 COPY setup.sh /setup.sh
-RUN /setup.sh
-CMD [ &quot;/bin/bash&quot; ]&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; /setup.sh
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;CMD&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [ &amp;quot;/bin/bash&amp;quot; ]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -35,23 +35,23 @@ CMD [ &quot;/bin/bash&quot; ]&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;sh&quot;&gt;#!/bin/bash
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;sh&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#!/bin/bash&lt;/span&gt;
 
-set -ex
-export arch=$(uname -m)
-if [ &quot;$arch&quot; == &quot;aarm64&quot; ]; then
-  arch=&quot;arm64&quot;;
-fi
-wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O ~/miniforge.sh
+&lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -ex
+&lt;span style=&quot;color: #008000&quot;&gt;export&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;uname -m&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;if&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$arch&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;==&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;aarm64&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;then&lt;/span&gt;
+  &lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;arm64&amp;quot;&lt;/span&gt;;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;fi&lt;/span&gt;
+wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;.sh -O ~/miniforge.sh
 chmod a+x ~/miniforge.sh
 ~/miniforge.sh -b -p /opt/conda
 /opt/conda/bin/conda clean -tipsy
 ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
-echo &quot;. /opt/conda/etc/profile.d/conda.sh&quot; &amp;gt;&amp;gt; ~/.bashrc
-echo &quot;conda activate base&quot; &amp;gt;&amp;gt; ~/.bashrc
-source ~/.bashrc
-find /opt/conda/ -follow -type f -name '*.a' -delete
-find /opt/conda/ -follow -type f -name '*.js.map' -delete
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;. /opt/conda/etc/profile.d/conda.sh&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;conda activate base&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;source&lt;/span&gt; ~/.bashrc
+find /opt/conda/ -follow -type f -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.a&amp;#39;&lt;/span&gt; -delete
+find /opt/conda/ -follow -type f -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.js.map&amp;#39;&lt;/span&gt; -delete
 /opt/conda/bin/conda clean -afy
 /opt/conda/bin/conda install --yes nomkl cytoolz cmake tini
 /opt/conda/bin/conda init bash
@@ -63,49 +63,49 @@ find /opt/conda/ -follow -type f -name '*.js.map' -delete
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;FROM  holdenk/miniforge:v0.3
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;  holdenk/miniforge:v0.3&lt;/span&gt;
 
-SHELL [&quot;/bin/bash&quot;, &quot;-c&quot;]
+SHELL &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;/bin/bash&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;-c&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;
 
-ENV PATH /opt/conda/bin:$PATH
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH /opt/conda/bin:$PATH&lt;/span&gt;
 
-RUN apt-get update --force-yes  -y --fix-missing &amp;amp;&amp;amp; \
-    apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;amp;&amp;amp; \
-    apt-get install --force-yes -y build-essential cmake libcurl4 libcurl4-openssl-dev libblosc-dev libblosc1 python3-blosc python3-dev &amp;amp;&amp;amp; \
-    apt-get upgrade --force-yes -y &amp;amp;&amp;amp; \
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; apt-get update --force-yes  -y --fix-missing &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get install --force-yes -y build-essential cmake libcurl4 libcurl4-openssl-dev libblosc-dev libblosc1 python3-blosc python3-dev &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get upgrade --force-yes -y &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
     apt-get clean
 
-RUN mamba install --yes python==3.8.6 \
-    &amp;amp;&amp;amp; mamba install --yes \
-    cytoolz \
-    dask==2.30.0 \
-    dask-core==2.30.0 \
-    lz4 \
-    numpy==1.19.2 \
-    pandas \
-    tini \
-    scikit-build \
-    python-blosc=1.9.2 \
-    pyzmq \
-    &amp;amp;&amp;amp; mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow\
-    &amp;amp;&amp;amp; mamba install --yes bokeh \
-    &amp;amp;&amp;amp; (mamba install --yes aiohttp==3.7.1 || pip install aiohttp==3.7.1 ) \
-    &amp;amp;&amp;amp; (mamba install --yes jupyter-server-proxy || pip install jupyter-server-proxy) \
-    &amp;amp;&amp;amp; (mamba install --yes llvmlite numba ) \
-    &amp;amp;&amp;amp; (mamba install --yes fastparquet || pip install fastparquet) \
-    &amp;amp;&amp;amp; find /opt/conda/ -type f,l -name '*.a' -delete \
-    &amp;amp;&amp;amp; find /opt/conda/ -type f,l -name '*.pyc' -delete \
-    &amp;amp;&amp;amp; find /opt/conda/ -type f,l -name '*.js.map' -delete \
-    &amp;amp;&amp;amp; find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name '*.js' -not -name '*.min.js' -delete \
-    &amp;amp;&amp;amp; rm -rf /opt/conda/pkgs
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;python&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==3&lt;/span&gt;.8.6 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; mamba install --yes &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    cytoolz &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #19177C&quot;&gt;dask&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==2&lt;/span&gt;.30.0 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    dask-core&lt;span style=&quot;color: #666666&quot;&gt;==2&lt;/span&gt;.30.0 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    lz4 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #19177C&quot;&gt;numpy&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==1&lt;/span&gt;.19.2 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    pandas &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    tini &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    scikit-build &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    python-blosc&lt;span style=&quot;color: #666666&quot;&gt;=1&lt;/span&gt;.9.2 &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    pyzmq &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; mamba install --yes bokeh &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;aiohttp&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==3&lt;/span&gt;.7.1 &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; pip install &lt;span style=&quot;color: #19177C&quot;&gt;aiohttp&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==3&lt;/span&gt;.7.1 &lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes jupyter-server-proxy &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; pip install jupyter-server-proxy&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes llvmlite numba &lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes fastparquet &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; pip install fastparquet&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; find /opt/conda/ -type f,l -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.a&amp;#39;&lt;/span&gt; -delete &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; find /opt/conda/ -type f,l -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.pyc&amp;#39;&lt;/span&gt; -delete &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; find /opt/conda/ -type f,l -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.js.map&amp;#39;&lt;/span&gt; -delete &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.js&amp;#39;&lt;/span&gt; -not -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.min.js&amp;#39;&lt;/span&gt; -delete &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; rm -rf /opt/conda/pkgs
 
-# pyzmq is installed explicitly so we don't have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won't install from conda directly
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# pyzmq is installed explicitly so we don&amp;#39;t have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won&amp;#39;t install from conda directly&lt;/span&gt;
 
 COPY prepare.sh /usr/bin/prepare.sh
 
-RUN mkdir /opt/app
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; mkdir /opt/app
 
-ENTRYPOINT [&quot;tini&quot;, &quot;-g&quot;, &quot;--&quot;, &quot;/usr/bin/prepare.sh&quot;]&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [&amp;quot;tini&amp;quot;, &amp;quot;-g&amp;quot;, &amp;quot;--&amp;quot;, &amp;quot;/usr/bin/prepare.sh&amp;quot;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -121,7 +121,7 @@ ENTRYPOINT [&quot;tini&quot;, &quot;-g&quot;, &quot;--&quot;, &quot;/usr/bin/pre
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;cluster = KubeCluster.from_yaml('worker-spec.yaml')&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;cluster &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; KubeCluster&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;from_yaml(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;worker-spec.yaml&amp;#39;&lt;/span&gt;)&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -129,10 +129,10 @@ ENTRYPOINT [&quot;tini&quot;, &quot;-g&quot;, &quot;--&quot;, &quot;/usr/bin/pre
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;kubectl create namespace dask
-kubectl create serviceaccount dask --namespace dask
-kubectl apply -f setup.yaml
-kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernetes --user=dask:dask&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;kubectl create namespace dask
+kubectl create serviceaccount dask &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;namespace dask
+kubectl &lt;span style=&quot;color: #008000&quot;&gt;apply&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;f setup&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;yaml
+kubectl create rolebinding dask&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;sa&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;binding &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;namespace dask &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;role&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;daskKubernetes &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;user&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;dask:dask&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -140,7 +140,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernete
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask')&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;cluster &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; KubeCluster&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;from_yaml(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;worker-spec.yaml&amp;#39;&lt;/span&gt;, namespace&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;dask&amp;#39;&lt;/span&gt;)&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -148,7 +148,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernete
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;# worker-spec.yml
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# worker-spec.yml&lt;/span&gt;
 
 kind: Pod
 metadata:
@@ -157,25 +157,25 @@ metadata:
     foo: bar5
 spec:
   restartPolicy: Never
-# Added by holden
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Added by holden&lt;/span&gt;
   serviceAccountName: dask
   automountServiceAccountToken: true
-# End added by Holden
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# End added by Holden&lt;/span&gt;
   containers:
-# Configure for dual arch
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Configure for dual arch&lt;/span&gt;
   - image: holdenk/dask-base:v0.9.1
     imagePullPolicy: IfNotPresent
-    args: [dask-worker, --nthreads, '2', --no-dashboard, --memory-limit, 6GB, --death-timeout, '60']
+    args: [&lt;span style=&quot;color: #19177C&quot;&gt;dask-worker&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--nthreads&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;2&amp;#39;&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--no-dashboard&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--memory-limit&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;6GB&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--death-timeout&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;60&amp;#39;&lt;/span&gt;]
     name: dask
-    #env:
-    #  - name: EXTRA_PIP_PACKAGES
-    #    value: git+https://github.com/dask/distributed
+    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#env:&lt;/span&gt;
+    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#  - name: EXTRA_PIP_PACKAGES&lt;/span&gt;
+    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#    value: git+https://github.com/dask/distributed&lt;/span&gt;
     resources:
       limits:
-        cpu: &quot;2&quot;
+        cpu: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
         memory: 8G
       requests:
-        cpu: &quot;2&quot;
+        cpu: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
         memory: 8G&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
@@ -195,20 +195,22 @@ spec:
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;# In[2]:
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# In[2]:&lt;/span&gt;
 
 
-# Specify a remote deployment using a load blanacer, necessary for communication with notebook from cluster
-dask.config.set({&quot;kubernetes.scheduler-service-type&quot;: &quot;LoadBalancer&quot;})
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Specify a remote deployment using a load blanacer, necessary for communication with notebook from cluster&lt;/span&gt;
+dask&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;config&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set({&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;kubernetes.scheduler-service-type&amp;quot;&lt;/span&gt;: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;LoadBalancer&amp;quot;&lt;/span&gt;})
 
 
-# In[4]:
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# In[4]:&lt;/span&gt;
 
 
-cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask', deploy_mode='remote')
+cluster &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; KubeCluster&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;from_yaml(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;worker-spec.yaml&amp;#39;&lt;/span&gt;, namespace&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;dask&amp;#39;&lt;/span&gt;, deploy_mode&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;remote&amp;#39;&lt;/span&gt;)
 
 
-# In[ ]:&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# In[ ]:&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -216,10 +218,10 @@ cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask', deploy_mod
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;sudo /opt/conda/bin/conda install -c conda-forge --all --yes mamba
-mamba install --yes python==3.8.6 cytoolz dask==2.30.0 dask-core==2.30.0 lz4 numpy==1.19.2 pandas tini \
-      scikit-build python-blosc=1.9.2 pyzmq s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs \
-      pygit2 pyarrow bokeh aiottp==3.7.1 llvmlite numba fastparquet&lt;/code&gt;&lt;/pre&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;sudo &lt;span style=&quot;color: #666666&quot;&gt;/&lt;/span&gt;opt&lt;span style=&quot;color: #666666&quot;&gt;/&lt;/span&gt;conda&lt;span style=&quot;color: #666666&quot;&gt;/&lt;/span&gt;&lt;span style=&quot;color: #008000&quot;&gt;bin&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;/&lt;/span&gt;conda install &lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;c conda&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;forge &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;&lt;span style=&quot;color: #008000&quot;&gt;all&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;yes mamba
+mamba install &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;yes python&lt;span style=&quot;color: #666666&quot;&gt;==3.8.6&lt;/span&gt; cytoolz dask&lt;span style=&quot;color: #666666&quot;&gt;==2.30.0&lt;/span&gt; dask&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;core&lt;span style=&quot;color: #666666&quot;&gt;==2.30.0&lt;/span&gt; lz4 numpy&lt;span style=&quot;color: #666666&quot;&gt;==1.19.2&lt;/span&gt; pandas tini \
+      scikit&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;build python&lt;span style=&quot;color: #666666&quot;&gt;-&lt;/span&gt;blosc&lt;span style=&quot;color: #666666&quot;&gt;=1.9.2&lt;/span&gt; pyzmq s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs \
+      pygit2 pyarrow bokeh aiottp&lt;span style=&quot;color: #666666&quot;&gt;==3.7.1&lt;/span&gt; llvmlite numba fastparquet&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -266,7 +268,7 @@ mamba install --yes python==3.8.6 cytoolz dask==2.30.0 dask-core==2.30.0 lz4 num
 &lt;div class=&quot;footnote&quot; id=&quot;_footnotedef_2&quot;&gt;
 &lt;a href=&quot;#_footnoteref_2&quot;&gt;2&lt;/a&gt;. You can use the actor API within the other APIs, but it is not part of the same building blocks.
 &lt;/div&gt;
-&lt;/div&gt;</content><author><name></name></author><summary type="html">After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</summary></entry><entry><title type="html">Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM</title><link href="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html" rel="alternate" type="text/html" title="Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM" /><published>2020-10-18T00:00:00+00:00</published><updated>2020-10-18T00:00:00+00:00</updated><id>/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm</id><content type="html" xml:base="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html">&lt;p&gt;After the &lt;a href=&quot;http://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html&quot;&gt;last adventure&lt;/a&gt; of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.&lt;/p&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</summary></entry><entry><title type="html">Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM</title><link href="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html" rel="alternate" type="text/html" title="Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM" /><published>2020-10-18T00:00:00-07:00</published><updated>2020-10-18T00:00:00-07:00</updated><id>/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm</id><content type="html" xml:base="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html">&lt;p&gt;After the &lt;a href=&quot;http://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html&quot;&gt;last adventure&lt;/a&gt; of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.&lt;/p&gt;
 
 &lt;p&gt;Software-wise, I ended up deciding on using &lt;a href=&quot;https://k3s.io/&quot;&gt;K3s&lt;/a&gt; for the Kubernetes deployment, and &lt;a href=&quot;https://rook.io/&quot;&gt;Rook&lt;/a&gt; with Ceph for the persistent volumes. And while I don’t travel nearly as much as I used to, I also set up &lt;a href=&quot;https://tailscale.com/&quot;&gt;tailscale for VPN access&lt;/a&gt; from the exciting distant location of my girlfriend’s house (and incase we ended up having to leave due to air quality).&lt;/p&gt;
 
@@ -345,7 +347,7 @@ mc mb &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k
 
 &lt;p&gt;The setup process was a bit more painful than I expected, but it was mostly due to my own choices. In retrospect, building images and flashing them was relatively slow with the emulation required on my old desktop. It would have been much easier to do a non-distributed volume deployment, like local volumes. but I want to set up PVs that I can experiment with using for fault recovery. Nova pointed out that I could have set up sshfs or NFS and could have gotten PVs working with a lot less effort, but by the time we had that conversation the sunk cost fallacy had me believing just one more “quick fix” was needed and then it would all magically work. Instead of K3s I could have used kubeadm but that seemed relatively heavyweight. Instead of installing K3s “manually” the &lt;a href=&quot;https://ma.ttias.be/deploying-highly-available-k3s-k3sup/&quot;&gt;k3sup project&lt;/a&gt; could have simplified some of this work. However, since I have a mix of different types of nodes, I wanted a bit more control.&lt;/p&gt;
 
-&lt;p&gt;Now that the cluster is set up, I’m going to test the cluster out some more with Apache Spark, the distributed computing program I’m most familiar with. Once we’ve made sure the basics are working with Spark, I’m planning on exploring how to get dask running. You can follow along with my adventures on my &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;YouTube channel over here&lt;/a&gt;, or &lt;a href=&quot;/mailinglist.html&quot;&gt;subscribe to the mailing list&lt;/a&gt; to keep up to date when I write a new post.&lt;/p&gt;</content><author><name></name></author><summary type="html">After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.</summary></entry><entry><title type="html">Building the Test Cluster</title><link href="/2020/09/20/building-the-physical-cluster.html" rel="alternate" type="text/html" title="Building the Test Cluster" /><published>2020-09-20T00:00:00+00:00</published><updated>2020-09-20T00:00:00+00:00</updated><id>/2020/09/20/building-the-physical-cluster</id><content type="html" xml:base="/2020/09/20/building-the-physical-cluster.html">&lt;p&gt;To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the &lt;a href=&quot;https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors&quot;&gt;noisy neighbor problem&lt;/a&gt;
+&lt;p&gt;Now that the cluster is set up, I’m going to test the cluster out some more with Apache Spark, the distributed computing program I’m most familiar with. Once we’ve made sure the basics are working with Spark, I’m planning on exploring how to get dask running. You can follow along with my adventures on my &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;YouTube channel over here&lt;/a&gt;, or &lt;a href=&quot;/mailinglist.html&quot;&gt;subscribe to the mailing list&lt;/a&gt; to keep up to date when I write a new post.&lt;/p&gt;</content><author><name></name></author><summary type="html">After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.</summary></entry><entry><title type="html">Building the Test Cluster</title><link href="/2020/09/20/building-the-physical-cluster.html" rel="alternate" type="text/html" title="Building the Test Cluster" /><published>2020-09-20T00:00:00-07:00</published><updated>2020-09-20T00:00:00-07:00</updated><id>/2020/09/20/building-the-physical-cluster</id><content type="html" xml:base="/2020/09/20/building-the-physical-cluster.html">&lt;p&gt;To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the &lt;a href=&quot;https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors&quot;&gt;noisy neighbor problem&lt;/a&gt;
 with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.&lt;/p&gt;
 
 &lt;h2 id=&quot;building-the-rack&quot;&gt;Building the Rack&lt;/h2&gt;
@@ -376,7 +378,7 @@ with any performance numbers and gives me more control over simulating network p
 
 &lt;p&gt;This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark and have &lt;a href=&quot;https://amzn.to/2O6KYYH&quot;&gt;some books published on the topic&lt;/a&gt; that may influence my views, but my views do not represent the project.&lt;/p&gt;
 
-&lt;p&gt;In as much as possible, I’ve used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.&lt;/p&gt;</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry><entry><title type="html">A First (Brief) Look at Ray on Kubernetes</title><link href="/2020/08/16/poke-at-ray.html" rel="alternate" type="text/html" title="A First (Brief) Look at Ray on Kubernetes" /><published>2020-08-16T00:00:00+00:00</published><updated>2020-08-16T00:00:00+00:00</updated><id>/2020/08/16/poke-at-ray</id><content type="html" xml:base="/2020/08/16/poke-at-ray.html">&lt;p&gt;After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same&lt;sup id=&quot;fnref:lab&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:lab&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising.&lt;/p&gt;
+&lt;p&gt;In as much as possible, I’ve used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.&lt;/p&gt;</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry><entry><title type="html">A First (Brief) Look at Ray on Kubernetes</title><link href="/2020/08/16/poke-at-ray.html" rel="alternate" type="text/html" title="A First (Brief) Look at Ray on Kubernetes" /><published>2020-08-16T00:00:00-07:00</published><updated>2020-08-16T00:00:00-07:00</updated><id>/2020/08/16/poke-at-ray</id><content type="html" xml:base="/2020/08/16/poke-at-ray.html">&lt;p&gt;After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same&lt;sup id=&quot;fnref:lab&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:lab&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising.&lt;/p&gt;
 
 &lt;p&gt;This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark &lt;a href=&quot;https://amzn.to/2O6KYYH&quot;&gt;and have some books published on the topic&lt;/a&gt; that may influence my views, but my views do not represent the project.&lt;/p&gt;
 

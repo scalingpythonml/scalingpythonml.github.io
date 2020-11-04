@@ -1,3 +1,0 @@
-# Mailinglist
-
-{% include mailinglist.html %}

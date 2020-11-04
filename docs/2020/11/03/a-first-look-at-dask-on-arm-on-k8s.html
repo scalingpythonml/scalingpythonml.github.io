@@ -11,9 +11,9 @@
 <meta property="og:description" content="After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice)." />
 <meta property="og:site_name" content="Scaling Python ML" />
 <meta property="og:type" content="article" />
-<meta property="article:published_time" content="2020-11-03T00:00:00+00:00" />
+<meta property="article:published_time" content="2020-11-03T00:00:00-08:00" />
 <script type="application/ld+json">
-{"datePublished":"2020-11-03T00:00:00+00:00","dateModified":"2020-11-03T00:00:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","headline":"A First Look at Dask on ARM on K8s","@type":"BlogPosting","@context":"https://schema.org"}</script>
+{"datePublished":"2020-11-03T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"@type":"BlogPosting","url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","headline":"A First Look at Dask on ARM on K8s","description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","dateModified":"2020-11-03T00:00:00-08:00","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
@@ -63,7 +63,7 @@
   <header class="post-header">
     <h1 class="post-title p-name" itemprop="name headline">A First Look at Dask on ARM on K8s</h1>
     <p class="post-meta">
-      <time class="dt-published" datetime="2020-11-03T00:00:00+00:00" itemprop="datePublished">Nov 3, 2020
+      <time class="dt-published" datetime="2020-11-03T00:00:00-08:00" itemprop="datePublished">Nov 3, 2020
       </time></p>
   </header>
 
@@ -86,18 +86,18 @@
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="dockerfile">FROM debian:buster-slim
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121"> debian:buster-slim</span>
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:$PATH
+<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> LANG=C.UTF-8 LC_ALL=C.UTF-8</span>
+<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH /opt/conda/bin:$PATH</span>
 
-RUN apt-get update --fix-missing &amp;&amp; \
-    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;&amp; \
+<span style="color: #008000; font-weight: bold">RUN</span> apt-get update --fix-missing <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     apt-get clean
 
 COPY setup.sh /setup.sh
-RUN /setup.sh
-CMD [ "/bin/bash" ]</code></pre>
+<span style="color: #008000; font-weight: bold">RUN</span> /setup.sh
+<span style="color: #008000; font-weight: bold">CMD</span><span style="color: #BA2121"> [ &quot;/bin/bash&quot; ]</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -105,23 +105,23 @@ CMD [ "/bin/bash" ]</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="sh">#!/bin/bash
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="sh"><span></span><span style="color: #408080; font-style: italic">#!/bin/bash</span>
 
-set -ex
-export arch=$(uname -m)
-if [ "$arch" == "aarm64" ]; then
-  arch="arm64";
-fi
-wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O ~/miniforge.sh
+<span style="color: #008000">set</span> -ex
+<span style="color: #008000">export</span> <span style="color: #19177C">arch</span><span style="color: #666666">=</span><span style="color: #008000; font-weight: bold">$(</span>uname -m<span style="color: #008000; font-weight: bold">)</span>
+<span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$arch</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">==</span> <span style="color: #BA2121">&quot;aarm64&quot;</span> <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span>
+  <span style="color: #19177C">arch</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;arm64&quot;</span>;
+<span style="color: #008000; font-weight: bold">fi</span>
+wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-<span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">arch</span><span style="color: #BB6688; font-weight: bold">}</span>.sh -O ~/miniforge.sh
 chmod a+x ~/miniforge.sh
 ~/miniforge.sh -b -p /opt/conda
 /opt/conda/bin/conda clean -tipsy
 ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
-echo ". /opt/conda/etc/profile.d/conda.sh" &gt;&gt; ~/.bashrc
-echo "conda activate base" &gt;&gt; ~/.bashrc
-source ~/.bashrc
-find /opt/conda/ -follow -type f -name '*.a' -delete
-find /opt/conda/ -follow -type f -name '*.js.map' -delete
+<span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;. /opt/conda/etc/profile.d/conda.sh&quot;</span> &gt;&gt; ~/.bashrc
+<span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;conda activate base&quot;</span> &gt;&gt; ~/.bashrc
+<span style="color: #008000">source</span> ~/.bashrc
+find /opt/conda/ -follow -type f -name <span style="color: #BA2121">&#39;*.a&#39;</span> -delete
+find /opt/conda/ -follow -type f -name <span style="color: #BA2121">&#39;*.js.map&#39;</span> -delete
 /opt/conda/bin/conda clean -afy
 /opt/conda/bin/conda install --yes nomkl cytoolz cmake tini
 /opt/conda/bin/conda init bash
@@ -133,49 +133,49 @@ find /opt/conda/ -follow -type f -name '*.js.map' -delete
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="dockerfile">FROM  holdenk/miniforge:v0.3
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/miniforge:v0.3</span>
 
-SHELL ["/bin/bash", "-c"]
+SHELL <span style="color: #666666">[</span><span style="color: #BA2121">&quot;/bin/bash&quot;</span>, <span style="color: #BA2121">&quot;-c&quot;</span><span style="color: #666666">]</span>
 
-ENV PATH /opt/conda/bin:$PATH
+<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH /opt/conda/bin:$PATH</span>
 
-RUN apt-get update --force-yes  -y --fix-missing &amp;&amp; \
-    apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;&amp; \
-    apt-get install --force-yes -y build-essential cmake libcurl4 libcurl4-openssl-dev libblosc-dev libblosc1 python3-blosc python3-dev &amp;&amp; \
-    apt-get upgrade --force-yes -y &amp;&amp; \
+<span style="color: #008000; font-weight: bold">RUN</span> apt-get update --force-yes  -y --fix-missing <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    apt-get install --force-yes -y build-essential cmake libcurl4 libcurl4-openssl-dev libblosc-dev libblosc1 python3-blosc python3-dev <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    apt-get upgrade --force-yes -y <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     apt-get clean
 
-RUN mamba install --yes python==3.8.6 \
-    &amp;&amp; mamba install --yes \
-    cytoolz \
-    dask==2.30.0 \
-    dask-core==2.30.0 \
-    lz4 \
-    numpy==1.19.2 \
-    pandas \
-    tini \
-    scikit-build \
-    python-blosc=1.9.2 \
-    pyzmq \
-    &amp;&amp; mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow\
-    &amp;&amp; mamba install --yes bokeh \
-    &amp;&amp; (mamba install --yes aiohttp==3.7.1 || pip install aiohttp==3.7.1 ) \
-    &amp;&amp; (mamba install --yes jupyter-server-proxy || pip install jupyter-server-proxy) \
-    &amp;&amp; (mamba install --yes llvmlite numba ) \
-    &amp;&amp; (mamba install --yes fastparquet || pip install fastparquet) \
-    &amp;&amp; find /opt/conda/ -type f,l -name '*.a' -delete \
-    &amp;&amp; find /opt/conda/ -type f,l -name '*.pyc' -delete \
-    &amp;&amp; find /opt/conda/ -type f,l -name '*.js.map' -delete \
-    &amp;&amp; find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name '*.js' -not -name '*.min.js' -delete \
-    &amp;&amp; rm -rf /opt/conda/pkgs
+<span style="color: #008000; font-weight: bold">RUN</span> mamba install --yes <span style="color: #19177C">python</span><span style="color: #666666">==3</span>.8.6 <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> mamba install --yes <span style="color: #BB6622; font-weight: bold">\</span>
+    cytoolz <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #19177C">dask</span><span style="color: #666666">==2</span>.30.0 <span style="color: #BB6622; font-weight: bold">\</span>
+    dask-core<span style="color: #666666">==2</span>.30.0 <span style="color: #BB6622; font-weight: bold">\</span>
+    lz4 <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #19177C">numpy</span><span style="color: #666666">==1</span>.19.2 <span style="color: #BB6622; font-weight: bold">\</span>
+    pandas <span style="color: #BB6622; font-weight: bold">\</span>
+    tini <span style="color: #BB6622; font-weight: bold">\</span>
+    scikit-build <span style="color: #BB6622; font-weight: bold">\</span>
+    python-blosc<span style="color: #666666">=1</span>.9.2 <span style="color: #BB6622; font-weight: bold">\</span>
+    pyzmq <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow<span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> mamba install --yes bokeh <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">(</span>mamba install --yes <span style="color: #19177C">aiohttp</span><span style="color: #666666">==3</span>.7.1 <span style="color: #666666">||</span> pip install <span style="color: #19177C">aiohttp</span><span style="color: #666666">==3</span>.7.1 <span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">(</span>mamba install --yes jupyter-server-proxy <span style="color: #666666">||</span> pip install jupyter-server-proxy<span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">(</span>mamba install --yes llvmlite numba <span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">(</span>mamba install --yes fastparquet <span style="color: #666666">||</span> pip install fastparquet<span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.a&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.pyc&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.js.map&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name <span style="color: #BA2121">&#39;*.js&#39;</span> -not -name <span style="color: #BA2121">&#39;*.min.js&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> rm -rf /opt/conda/pkgs
 
-# pyzmq is installed explicitly so we don't have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won't install from conda directly
+<span style="color: #408080; font-style: italic"># pyzmq is installed explicitly so we don&#39;t have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won&#39;t install from conda directly</span>
 
 COPY prepare.sh /usr/bin/prepare.sh
 
-RUN mkdir /opt/app
+<span style="color: #008000; font-weight: bold">RUN</span> mkdir /opt/app
 
-ENTRYPOINT ["tini", "-g", "--", "/usr/bin/prepare.sh"]</code></pre>
+<span style="color: #008000; font-weight: bold">ENTRYPOINT</span><span style="color: #BA2121"> [&quot;tini&quot;, &quot;-g&quot;, &quot;--&quot;, &quot;/usr/bin/prepare.sh&quot;]</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -191,7 +191,7 @@ ENTRYPOINT ["tini", "-g", "--", "/usr/bin/prepare.sh"]</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="python">cluster = KubeCluster.from_yaml('worker-spec.yaml')</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="python"><span></span>cluster <span style="color: #666666">=</span> KubeCluster<span style="color: #666666">.</span>from_yaml(<span style="color: #BA2121">&#39;worker-spec.yaml&#39;</span>)</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -199,10 +199,10 @@ ENTRYPOINT ["tini", "-g", "--", "/usr/bin/prepare.sh"]</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="python">kubectl create namespace dask
-kubectl create serviceaccount dask --namespace dask
-kubectl apply -f setup.yaml
-kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernetes --user=dask:dask</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="python"><span></span>kubectl create namespace dask
+kubectl create serviceaccount dask <span style="color: #666666">--</span>namespace dask
+kubectl <span style="color: #008000">apply</span> <span style="color: #666666">-</span>f setup<span style="color: #666666">.</span>yaml
+kubectl create rolebinding dask<span style="color: #666666">-</span>sa<span style="color: #666666">-</span>binding <span style="color: #666666">--</span>namespace dask <span style="color: #666666">--</span>role<span style="color: #666666">=</span>daskKubernetes <span style="color: #666666">--</span>user<span style="color: #666666">=</span>dask:dask</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -210,7 +210,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernete
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="python">cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask')</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="python"><span></span>cluster <span style="color: #666666">=</span> KubeCluster<span style="color: #666666">.</span>from_yaml(<span style="color: #BA2121">&#39;worker-spec.yaml&#39;</span>, namespace<span style="color: #666666">=</span><span style="color: #BA2121">&#39;dask&#39;</span>)</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -218,7 +218,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernete
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="yaml"># worker-spec.yml
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #408080; font-style: italic"># worker-spec.yml</span>
 
 kind: Pod
 metadata:
@@ -227,25 +227,25 @@ metadata:
     foo: bar5
 spec:
   restartPolicy: Never
-# Added by holden
+<span style="color: #408080; font-style: italic"># Added by holden</span>
   serviceAccountName: dask
   automountServiceAccountToken: true
-# End added by Holden
+<span style="color: #408080; font-style: italic"># End added by Holden</span>
   containers:
-# Configure for dual arch
+<span style="color: #408080; font-style: italic"># Configure for dual arch</span>
   - image: holdenk/dask-base:v0.9.1
     imagePullPolicy: IfNotPresent
-    args: [dask-worker, --nthreads, '2', --no-dashboard, --memory-limit, 6GB, --death-timeout, '60']
+    args: [<span style="color: #19177C">dask-worker</span>, <span style="color: #19177C">--nthreads</span>, <span style="color: #BA2121">&#39;2&#39;</span>, <span style="color: #19177C">--no-dashboard</span>, <span style="color: #19177C">--memory-limit</span>, <span style="color: #19177C">6GB</span>, <span style="color: #19177C">--death-timeout</span>, <span style="color: #BA2121">&#39;60&#39;</span>]
     name: dask
-    #env:
-    #  - name: EXTRA_PIP_PACKAGES
-    #    value: git+https://github.com/dask/distributed
+    <span style="color: #408080; font-style: italic">#env:</span>
+    <span style="color: #408080; font-style: italic">#  - name: EXTRA_PIP_PACKAGES</span>
+    <span style="color: #408080; font-style: italic">#    value: git+https://github.com/dask/distributed</span>
     resources:
       limits:
-        cpu: "2"
+        cpu: <span style="color: #BA2121">&quot;2&quot;</span>
         memory: 8G
       requests:
-        cpu: "2"
+        cpu: <span style="color: #BA2121">&quot;2&quot;</span>
         memory: 8G</code></pre>
 </div>
 </div>
@@ -265,20 +265,22 @@ spec:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="python"># In[2]:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="python"><span></span>
+
+<span style="color: #408080; font-style: italic"># In[2]:</span>
 
 
-# Specify a remote deployment using a load blanacer, necessary for communication with notebook from cluster
-dask.config.set({"kubernetes.scheduler-service-type": "LoadBalancer"})
+<span style="color: #408080; font-style: italic"># Specify a remote deployment using a load blanacer, necessary for communication with notebook from cluster</span>
+dask<span style="color: #666666">.</span>config<span style="color: #666666">.</span>set({<span style="color: #BA2121">&quot;kubernetes.scheduler-service-type&quot;</span>: <span style="color: #BA2121">&quot;LoadBalancer&quot;</span>})
 
 
-# In[4]:
+<span style="color: #408080; font-style: italic"># In[4]:</span>
 
 
-cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask', deploy_mode='remote')
+cluster <span style="color: #666666">=</span> KubeCluster<span style="color: #666666">.</span>from_yaml(<span style="color: #BA2121">&#39;worker-spec.yaml&#39;</span>, namespace<span style="color: #666666">=</span><span style="color: #BA2121">&#39;dask&#39;</span>, deploy_mode<span style="color: #666666">=</span><span style="color: #BA2121">&#39;remote&#39;</span>)
 
 
-# In[ ]:</code></pre>
+<span style="color: #408080; font-style: italic"># In[ ]:</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -286,10 +288,10 @@ cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask', deploy_mod
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="python">sudo /opt/conda/bin/conda install -c conda-forge --all --yes mamba
-mamba install --yes python==3.8.6 cytoolz dask==2.30.0 dask-core==2.30.0 lz4 numpy==1.19.2 pandas tini \
-      scikit-build python-blosc=1.9.2 pyzmq s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs \
-      pygit2 pyarrow bokeh aiottp==3.7.1 llvmlite numba fastparquet</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="python"><span></span>sudo <span style="color: #666666">/</span>opt<span style="color: #666666">/</span>conda<span style="color: #666666">/</span><span style="color: #008000">bin</span><span style="color: #666666">/</span>conda install <span style="color: #666666">-</span>c conda<span style="color: #666666">-</span>forge <span style="color: #666666">--</span><span style="color: #008000">all</span> <span style="color: #666666">--</span>yes mamba
+mamba install <span style="color: #666666">--</span>yes python<span style="color: #666666">==3.8.6</span> cytoolz dask<span style="color: #666666">==2.30.0</span> dask<span style="color: #666666">-</span>core<span style="color: #666666">==2.30.0</span> lz4 numpy<span style="color: #666666">==1.19.2</span> pandas tini \
+      scikit<span style="color: #666666">-</span>build python<span style="color: #666666">-</span>blosc<span style="color: #666666">=1.9.2</span> pyzmq s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs \
+      pygit2 pyarrow bokeh aiottp<span style="color: #666666">==3.7.1</span> llvmlite numba fastparquet</code></pre>
 </div>
 </div>
 <div class="paragraph">
