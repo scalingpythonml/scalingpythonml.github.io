@@ -4,7 +4,8 @@
 # Ubuntu 20.04 (focal)
 # https://hub.docker.com/_/ubuntu/?tab=tags&name=focal
 # OS/ARCH: linux/amd64
-ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4
+#ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4
+ARG ROOT_CONTAINER=ubuntu:focal
 
 ARG BASE_CONTAINER=$ROOT_CONTAINER
 FROM $BASE_CONTAINER
@@ -94,10 +95,14 @@ ENV MINICONDA_VERSION="${miniconda_version}" \
     CONDA_VERSION="${conda_version}"
 
 WORKDIR /tmp
-RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "${miniconda_checksum} *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-    /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-    rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+RUN export arch=$(uname -m) && \
+    if [ "$arch" == "aarm64" ]; then \
+      arch="arm64"; \
+    fi; \
+    wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O miniforge.sh && \
+    chmod a+x miniforge.sh && \
+    ./miniforge.sh -f -b -p $CONDA_DIR && \
+    rm miniforge.sh && \
     # Conda configuration see https://conda.io/projects/conda/en/latest/configuration.html
     echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
     conda config --system --prepend channels conda-forge && \
