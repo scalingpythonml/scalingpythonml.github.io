@@ -28,6 +28,9 @@ plugins:
   - jekyll-gist
   - jekyll-octicons
   - jekyll-github-metadata
+  - jekyll-asciidoc
+  - jekyll-sitemap
+
 
 titles_from_headings:
   enabled:     true
@@ -48,13 +51,16 @@ show_excerpts: true
 header_pages:
   - about.md
   - mailinglist.md
-
-plugins:
-  - jekyll-asciidoc
-  - jekyll-sitemap
     
 asciidoctor:
   attributes:
   - idprefix=_
   - source-highlighter=pygments
   - pygments-css=style
+
+defaults:
+  -
+    scope:
+      path:            "subrepos/**/*"
+    values:
+      sitemap:         false
