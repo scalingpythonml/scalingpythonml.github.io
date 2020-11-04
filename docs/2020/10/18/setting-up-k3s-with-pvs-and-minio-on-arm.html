@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM | Scaling Python ML</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned." />
+<meta property="og:description" content="After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned." />
+<meta property="og:site_name" content="Scaling Python ML" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-10-18T00:00:00+00:00" />
+<script type="application/ld+json">
+{"datePublished":"2020-10-18T00:00:00+00:00","dateModified":"2020-10-18T00:00:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html"},"url":"/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html","description":"After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.","headline":"Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
+
+  <script>
+  function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+  window.onload = wrap_img;
+  </script>
+
+</head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Scaling Python ML</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about.html">About</a><a class="page-link" href="/mailinglist.html">Mailinglist</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-10-18T00:00:00+00:00" itemprop="datePublished">Oct 18, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>After the <a href="http://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html">last adventure</a> of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.</p>
+
+<p>Software-wise, I ended up deciding on using <a href="https://k3s.io/">K3s</a> for the Kubernetes deployment, and <a href="https://rook.io/">Rook</a> with Ceph for the persistent volumes. And while I don’t travel nearly as much as I used to, I also set up <a href="https://tailscale.com/">tailscale for VPN access</a> from the exciting distant location of my girlfriend’s house (and incase we ended up having to leave due to air quality).</p>
+
+<h2 id="building-the-base-image-for-the-raspberry-pis">Building the base image for the Raspberry Pis</h2>
+
+<p>For the Raspberry Pis I decided to use the Ubuntu Raspberry Pi image as its base. The Raspberry Pis boot off of microsd cards, which allows us to pre-build system images rather than running through the install process on each instance. My desktop is an x86, but by following <a href="https://docs.j7k6.org/raspberry-pi-chroot-armv7-qemu/">this guide</a>, I was able to set up an emulation layer so I could cross-build the image for the ARM Raspberry Pis.</p>
+
+<p>I pre-installed the base layer with Avahi (so the workers and find the leader), ZFS (to create a local storage layer to back our volumes), and necessary container tools. This step ended up taking a while, but I made the most of it by re-using the same image on multiple workers. I also had this stage copy over some configuration files, which didn’t depend on having emulation set up.</p>
+
+<p>However, not everything is easily baked into an image. For example, at first boot, the leader node installs K3s and generates a certificate. Also, when each worker first boots, it connects to the leader and fetches the configuration required to join the cluster. Ubuntu has a mechanism for this (called cloud-init), but rather than figure out a new system I went with the old school self-disabling init-script to do the “first boot” activities.</p>
+
+<h2 id="setting-up-the-jetsons--my-one-x86-machine">Setting up the Jetsons &amp; my one x86 machine</h2>
+
+<p>Unlike the Raspberry Pis, the Jetson AGX’s &amp; x86 machines have internal storage that they boot from. While the Jetson nano does boot from a microsd card, the images available are installer images that require user interaction to set up. Thankfully, since I wrote everything down in a shell script, it was fairly simple to install the same packages and do the same setup on the Raspberry Pis.</p>
+
+<p>By default, K3s uses containerd to execute its containers. I found another interesting <a href="https://www.virtualthoughts.co.uk/2020/03/24/k3s-and-nvidia-jetson-nano/">blog post on using K3s on Jetsons</a>, and the main changes that I needed for the setup is to switch from containerd to docker and to configure docker to use the “nvidia” runtime as the default.</p>
+
+<h2 id="getting-the-cluster-to-work">Getting the cluster to work</h2>
+
+<p>So, despite pre-baking the images, and having scripts to install “everything,” I ended up running into a bunch of random problems along the way. These spanned everything from hardware to networking to my software setup.</p>
+
+<p>The leader node started pretty much as close to perfect as possible, and one of the two workers Raspberry Pis came right up. The second worker Pi kept spitting out malformed packets on the switch – and I’m not really sure what’s going on with that one – but the case did melt a little bit, which makes me think there might have been a hardware issue with that one node. I did try replacing the network cable and putting it into a different port, but got the same results. When I replaced it with a different Pi everything worked just fine, so I’ll debug the broken node when I’ve got some spare time.</p>
+
+<p>I also had some difficulty with my Jetson Nano not booting. At first, I thought maybe the images I was baking were no good, but then I tried the stock image along with a system reset, and that didn’t get me any further. Eventually I tried a new microsd card along with the stock image and shorting out pin 40 and it booted like a champ.</p>
+
+<p>On the networking side, I have a fail-over configured for my home network. However, it seems that despite my thinking I had my router configured to fail-over only if the primary connection has an outage and not do any load-balancing otherwise, I kept getting random connection issues. Once I disabled the fail-over connections the networking issues disappeared. I’m not completely sure what’s going on with this part, but for now, I can just manually do a failover if sonic goes out.</p>
+
+<p>On the software side, Avahi worked fine on all of the ARM boards but for some reason doesn’t seem to be working on the x86 node The only difference that I could figure was that the x86 node has a static lease configured with the DHCP server, but I don’t think that would cause this issue. While having local DNS between the worker nodes would be useful, this was getting near the end of the day, so I just added the leader to the x86’s node’s host files and called it a day. The software issues lead us nicely into the self caused issues I had trying to get persistent volumes working.</p>
+
+<h2 id="getting-persistent-volumes-working">Getting persistent volumes working</h2>
+
+<p>One of the concepts I’m interested in playing with is fault tolerance. One potential mechanism for this is using persistent volumes to store some kind of state and recovering from them. In this situation we want our volumes to remain working even if we take a node out of service, so we can’t just depend on local volume path provisioning to test this out.</p>
+
+<p>There are many different projects that could provide persistent volumes on Kubernetes. My first attempt was with GlusterFS; however, the Gluster Kubernetes project has been “archived.” So after some headaches, I moved on to trying Rook and Ceph. Getting Rook and Ceph running together ended up being quite the learning adventure; both Kris and Duffy jumped on a video call with me to help figure out what was going on. After a lot of debugging – they noticed that it was an architecture issue – namely, many of the CSI containers were not yet cross-compiled for ARM. We did a lot of sleuthing and found unofficial multi-arch versions of these containers. Since then, the <a href="https://github.com/raspbernetes/multi-arch-images">rasbernetes</a> project has started cross-compiling the CSI containers, I’ve switched to using as it’s a bit simpler to keep track of.</p>
+
+<p><img src="/images/rook-ceph-works.jpeg" alt="Image of rook/ceph status reporting ok" /></p>
+
+<!-- From setup_rook.sh -->
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">pushd</span> /rook/cluster/examples/kubernetes/ceph
+kubectl create <span class="nt">-f</span> common.yaml
+kubectl create <span class="nt">-f</span> rook_operator_arm64.yaml
+kubectl create <span class="nt">-f</span> rook_cluster.yaml
+kubectl create <span class="nt">-f</span> ./csi/rbd/storageclass.yaml
+</code></pre></div></div>
+
+<h2 id="adding-an-object-store">Adding an object store</h2>
+
+<p>During my first run of <a href="https://www.youtube.com/watch?v=V1SkEl1r4Pg&amp;t=6s">Apache Spark on the new cluster</a>, I was reminded of the usefulness of an object-store. I’m used to working in an environment where I have an object store available. Thankfully MinIO is available to provide an S3 compatible object store on Kube. It can be backed by the persistent volumes I set up using Rook &amp; Ceph. It can also use local storage, but I decided to use it as a first test of the persistent volumes. Once I had fixed the issues with Ceph, MinIO deployed relatively simply <a href="https://github.com/minio/charts">using a helm chart</a>.</p>
+
+<p>While MinIO does build docker containers for arm64 and amd64, it gives them seperate tags. Since I’ve got a mix of x86 machines and arm machines in the same cluster I ended up using an un-official multi-arch build. I did end up pinning it to the x86 machine for now, since I haven’t had the time to recompile the kernels on the arm machines to support rbd.</p>
+
+<!-- From setup_minio.sh -->
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install minio using ceph to back our storage. Deploy on the x86 because we don't have the rbd kernel module on the ARM nodes. Also we want to save the arm nodes for compute.</span>
+helm <span class="nb">install</span> <span class="nt">--namespace</span> minio <span class="nt">--generate-name</span> minio/minio <span class="nt">--set</span>   persistence.storageClass<span class="o">=</span>rook-ceph-block,nodeSelector.<span class="s2">"beta</span><span class="se">\\</span><span class="s2">.kubernetes</span><span class="se">\\</span><span class="s2">.io/arch"</span><span class="o">=</span>amd64
+<span class="c"># Do a helm ls and find the deployment name name</span>
+<span class="nv">deployment_name</span><span class="o">=</span><span class="si">$(</span>helm <span class="nb">ls</span> <span class="nt">-n</span> minio | <span class="nb">cut</span> <span class="nt">-f</span> 1 | <span class="nb">tail</span> <span class="nt">-n</span> 1<span class="si">)</span>
+<span class="nv">ACCESS_KEY</span><span class="o">=</span><span class="si">$(</span>kubectl get secret <span class="nt">-n</span> minio <span class="s2">"</span><span class="nv">$deployment_name</span><span class="s2">"</span> <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.accesskey}"</span> | <span class="nb">base64</span> <span class="nt">--decode</span><span class="si">)</span><span class="p">;</span> <span class="nv">SECRET_KEY</span><span class="o">=</span><span class="si">$(</span>kubectl get secret <span class="nt">-n</span> minio <span class="s2">"</span><span class="nv">$deployment_name</span><span class="s2">"</span> <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.data.secretkey}"</span> | <span class="nb">base64</span> <span class="nt">--decode</span><span class="si">)</span>
+<span class="c"># Defaults are "YOURACCESSKEY" and "YOURSECRETKEY"</span>
+mc <span class="nb">alias set</span> <span class="s2">"</span><span class="k">${</span><span class="nv">deployment_name</span><span class="k">}</span><span class="s2">-local"</span> http://localhost:9000 <span class="s2">"</span><span class="nv">$ACCESS_KEY</span><span class="s2">"</span> <span class="s2">"</span><span class="nv">$SECRET_KEY</span><span class="s2">"</span> <span class="nt">--api</span> s3v4
+mc <span class="nb">ls</span> <span class="s2">"</span><span class="k">${</span><span class="nv">deployment_name</span><span class="k">}</span><span class="s2">-local"</span>
+mc mb <span class="s2">"</span><span class="k">${</span><span class="nv">deployment_name</span><span class="k">}</span><span class="s2">-local"</span>://dask-test
+</code></pre></div></div>
+
+<h2 id="getting-kubectl-working-from-my-desktop">Getting kubectl working from my desktop</h2>
+
+<p>Once I had K3s set up, I wanted to be able to access it from my desktop without having to SSH to a node in the cluster. The <a href="https://rancher.com/docs/k3s/latest/en/cluster-access/">K3s documentation says</a> to copy <code class="language-plaintext highlighter-rouge">/etc/rancher/k3s/k3s.yaml</code> from the cluster to your local <code class="language-plaintext highlighter-rouge">~/.kube/config</code> and replace the string localhost with the ip/DNS of the leader. Since I had multiple existing clusters I copied the part under each top-level key to the corresponding key, while changing the “default” string to k3s when copying so that I could remember the context better. The first time I did this I got the whitespace mixed up which lead to <code class="language-plaintext highlighter-rouge">Error in configuration: context was not found for specified context: k3s</code> – but after I fixed my YAML everything worked :)</p>
+
+<h2 id="setting-up-a-vpn-solution">Setting up a VPN solution</h2>
+
+<p>While shelter in place has made accessing my home network remotely less important, I do still occasionally get out of the house while staying within my social bubble. Some of my friends from University/Co-Op are now at a company called tailscale, which does magic with WireGuard to allow even double-natted networks to have VPNs. Since I was doing this part as an afterthought, I didn’t have tailscale installed on all of the nodes, so I followed the <a href="https://tailscale.com/kb/1019/subnets">instructions to enable subnets </a>(note: I missed enabling the “Enable subnet routes” in the admin console the first time) and have my desktop act as a “gateway” host for the K8s cluster when I’m “traveling.” With tailscale, set up I was able to run kubectl from my laptop at Nova’s place :)</p>
+
+<p>Josh Patterson has <a href="https://medium.com/rapids-ai/rapids-anywhere-with-tailscale-my-mobile-device-has-an-rtx-3090-1ce0c7b443fe?source=rss----2d7ba3077a44---4">a blog post on using tailscale with RAPIDS</a>.</p>
+
+<h2 id="conclusion--alternatives">Conclusion &amp; alternatives</h2>
+
+<p>The setup process was a bit more painful than I expected, but it was mostly due to my own choices. In retrospect, building images and flashing them was relatively slow with the emulation required on my old desktop. It would have been much easier to do a non-distributed volume deployment, like local volumes. but I want to set up PVs that I can experiment with using for fault recovery. Nova pointed out that I could have set up sshfs or NFS and could have gotten PVs working with a lot less effort, but by the time we had that conversation the sunk cost fallacy had me believing just one more “quick fix” was needed and then it would all magically work. Instead of K3s I could have used kubeadm but that seemed relatively heavyweight. Instead of installing K3s “manually” the <a href="https://ma.ttias.be/deploying-highly-available-k3s-k3sup/">k3sup project</a> could have simplified some of this work. However, since I have a mix of different types of nodes, I wanted a bit more control.</p>
+
+<p>Now that the cluster is set up, I’m going to test the cluster out some more with Apache Spark, the distributed computing program I’m most familiar with. Once we’ve made sure the basics are working with Spark, I’m planning on exploring how to get dask running. You can follow along with my adventures on my <a href="https://www.youtube.com/user/holdenkarau">YouTube channel over here</a>, or <a href="/mailinglist.html">subscribe to the mailing list</a> to keep up to date when I write a new post.</p>
+
+  </div><a class="u-url" href="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Scaling Python ML</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Scaling Python ML</li><li><a class="u-email" href="mailto:holden@pigscanfly.ca">holden@pigscanfly.ca</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list">
+  <li><a href="https://github.com/scalingpythonml"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">scalingpythonml</span></a></li><li><a href="https://www.twitter.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">holdenkarau</span></a></li><li><a href="https://youtube.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#youtube"></use></svg> <span class="username">holdenkarau</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Blog of my adventures working with different tools for scaling Python ML workloads.</p>
+      </div>
+    </div>
+
+    <br />
+
+    If you enjoy this work and have some extra $s, consider sponsoring <a href="https://github.com/sponsors/holdenk">my OSS work</a>.
+
+    <!-- Disclamer -->
+
+    This blog does not represent any of my employers, software projects, or foundations I'm a part of.
+    I am one of the developers of Apache Spark <a href="https://amzn.to/2O6KYYH">and have some books published on the topic</a> <a href="https://amzn.to/2IA6Yf0">(plus a new Kubeflow book)</a> that may influence my views.
+    Some of the links on this blog may generate an affiliate commission. I also earn royalties from my books.
+    Generally speaking these do not cover the amount I spend on these adventures, but help defray my hardware, <a href="https://amzn.to/31mIOeK">coffee</a>, and <a href="https://dynamodonut.com/">artisinal doughnut</a> costs.
+
+<!-- License -->
+    <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />The posts on this blog are licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>. <br />
+
+<!-- Fork me on github -->
+<a href="https://github.com/scalingpythonml/scalingpythonml.github.io" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

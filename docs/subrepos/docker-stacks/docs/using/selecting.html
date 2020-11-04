@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Selecting an Image | Scaling Python ML</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="Selecting an Image" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
+<meta property="og:description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
+<meta property="og:site_name" content="Scaling Python ML" />
+<script type="application/ld+json">
+{"url":"/subrepos/docker-stacks/docs/using/selecting.html","description":"Blog of my adventures working with different tools for scaling Python ML workloads.","headline":"Selecting an Image","@type":"WebPage","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
+
+  <script>
+  function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+  window.onload = wrap_img;
+  </script>
+
+</head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Scaling Python ML</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about.html">About</a><a class="page-link" href="/mailinglist.html">Mailinglist</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Selecting an Image</h1>
+  </header>
+
+  <div class="post-content">
+    <ul>
+  <li><a href="#core-stacks">Core Stacks</a></li>
+  <li><a href="#image-relationships">Image Relationships</a></li>
+  <li><a href="#community-stacks">Community Stacks</a></li>
+</ul>
+
+<p>Using one of the Jupyter Docker Stacks requires two choices:</p>
+
+<ol>
+  <li>Which Docker image you wish to use</li>
+  <li>How you wish to start Docker containers from that image</li>
+</ol>
+
+<p>This section provides details about the first.</p>
+
+<h2 id="core-stacks">Core Stacks</h2>
+
+<p>The Jupyter team maintains a set of Docker image definitions in the
+<a href="https://github.com/jupyter/docker-stacks">https://github.com/jupyter/docker-stacks</a> GitHub
+repository. The following sections describe these images including their contents, relationships,
+and versioning strategy.</p>
+
+<h3 id="jupyterbase-notebook">jupyter/base-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/base-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/base-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/base-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/base-notebook</code> is a small image supporting the
+<a href="/subrepos/docker-stacks/docs/using/common.html">options common across all core stacks</a>. It is the basis for all other stacks.</p>
+
+<ul>
+  <li>Minimally-functional Jupyter Notebook server (e.g., no LaTeX support for saving notebooks as PDFs)</li>
+  <li><a href="https://conda.io/miniconda.html">Miniconda</a> Python 3.x in <code class="language-plaintext highlighter-rouge">/opt/conda</code></li>
+  <li>No preinstalled scientific computing packages</li>
+  <li>Unprivileged user <code class="language-plaintext highlighter-rouge">jovyan</code> (<code class="language-plaintext highlighter-rouge">uid=1000</code>, configurable, see options) in group <code class="language-plaintext highlighter-rouge">users</code> (<code class="language-plaintext highlighter-rouge">gid=100</code>)
+with ownership over the <code class="language-plaintext highlighter-rouge">/home/jovyan</code> and <code class="language-plaintext highlighter-rouge">/opt/conda</code> paths</li>
+  <li><code class="language-plaintext highlighter-rouge">tini</code> as the container entrypoint and a <code class="language-plaintext highlighter-rouge">start-notebook.sh</code> script as the default command</li>
+  <li>A <code class="language-plaintext highlighter-rouge">start-singleuser.sh</code> script useful for launching containers in JupyterHub</li>
+  <li>A <code class="language-plaintext highlighter-rouge">start.sh</code> script useful for running alternative commands in the container (e.g. <code class="language-plaintext highlighter-rouge">ipython</code>,
+<code class="language-plaintext highlighter-rouge">jupyter kernelgateway</code>, <code class="language-plaintext highlighter-rouge">jupyter lab</code>)</li>
+  <li>Options for a self-signed HTTPS certificate and passwordless sudo</li>
+</ul>
+
+<h3 id="jupyterminimal-notebook">jupyter/minimal-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/minimal-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/minimal-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/minimal-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/minimal-notebook</code> adds command line tools useful when working in Jupyter applications.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/base-notebook</code></li>
+  <li><a href="https://www.tug.org/texlive/">TeX Live</a> for notebook document conversion</li>
+  <li><a href="https://git-scm.com/">git</a>, <a href="https://www.gnu.org/software/emacs/">emacs</a> (actually <code class="language-plaintext highlighter-rouge">emacs-nox</code>),
+<a href="https://vim.org/">vi</a> (actually <code class="language-plaintext highlighter-rouge">vim-tiny</code>), <a href="https://www.jedsoft.org/jed/">jed</a>,
+<a href="https://www.nano-editor.org/">nano</a> (actually <code class="language-plaintext highlighter-rouge">nano-tiny</code>), tzdata, and unzip</li>
+</ul>
+
+<h3 id="jupyterr-notebook">jupyter/r-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/r-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/r-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/r-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/r-notebook</code> includes popular packages from the R ecosystem.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/minimal-notebook</code> and its ancestor images</li>
+  <li>The <a href="https://www.r-project.org/">R</a> interpreter and base environment</li>
+  <li><a href="https://irkernel.github.io/">IRKernel</a> to support R code in Jupyter notebooks</li>
+  <li><a href="https://www.tidyverse.org/">tidyverse</a> packages from
+<a href="https://conda-forge.github.io/feedstocks">conda-forge</a></li>
+  <li><a href="https://cran.r-project.org/web/packages/devtools/index.html">devtools</a>,
+<a href="https://shiny.rstudio.com/">shiny</a>, <a href="http://rmarkdown.rstudio.com/">rmarkdown</a>,
+<a href="https://cran.r-project.org/web/packages/forecast/forecast.pdf">forecast</a>,
+<a href="https://cran.r-project.org/web/packages/RSQLite/index.html">rsqlite</a>,
+<a href="https://cran.r-project.org/web/packages/nycflights13/index.html">nycflights13</a>,
+<a href="http://topepo.github.io/caret/index.html">caret</a>, <a href="https://www.tidymodels.org/">tidymodels</a>,
+<a href="https://cran.r-project.org/web/packages/RCurl/index.html">rcurl</a>, and
+<a href="https://cran.r-project.org/web/packages/randomForest/randomForest.pdf">randomforest</a> packages
+from <a href="https://conda-forge.github.io/feedstocks">conda-forge</a></li>
+</ul>
+
+<h3 id="jupyterscipy-notebook">jupyter/scipy-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/scipy-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/scipy-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/scipy-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/scipy-notebook</code> includes popular packages from the scientific Python ecosystem.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/minimal-notebook</code> and its ancestor images</li>
+  <li><a href="https://dask.org/">dask</a>, <a href="https://pandas.pydata.org/">pandas</a>,
+<a href="https://github.com/pydata/numexpr">numexpr</a>, <a href="https://matplotlib.org/">matplotlib</a>,
+<a href="https://www.scipy.org/">scipy</a>, <a href="https://seaborn.pydata.org/">seaborn</a>,
+<a href="http://scikit-learn.org/stable/">scikit-learn</a>, <a href="http://scikit-image.org/">scikit-image</a>,
+<a href="http://www.sympy.org/en/index.html">sympy</a>, <a href="http://cython.org/">cython</a>,
+<a href="https://patsy.readthedocs.io/en/latest/">patsy</a>,
+<a href="http://www.statsmodels.org/stable/index.html">statsmodel</a>,
+<a href="https://github.com/cloudpipe/cloudpickle">cloudpickle</a>,
+<a href="https://pypi.python.org/pypi/dill">dill</a>, <a href="https://numba.pydata.org/">numba</a>,
+<a href="https://bokeh.pydata.org/en/latest/">bokeh</a>, <a href="https://www.sqlalchemy.org/">sqlalchemy</a>,
+<a href="http://www.h5py.org/">hdf5</a>, <a href="http://vincent.readthedocs.io/en/latest/">vincent</a>,
+<a href="https://www.crummy.com/software/BeautifulSoup/">beautifulsoup</a>,
+<a href="https://developers.google.com/protocol-buffers/docs/pythontutorial">protobuf</a>,
+<a href="http://www.python-excel.org/">xlrd</a>, <a href="https://bottleneck.readthedocs.io/en/latest/">bottleneck</a>,
+and <a href="https://www.pytables.org/">pytables</a> packages</li>
+  <li><a href="https://ipywidgets.readthedocs.io/en/stable/">ipywidgets</a> and
+<a href="https://github.com/matplotlib/jupyter-matplotlib">ipympl</a> for interactive visualizations and
+plots in Python notebooks</li>
+  <li><a href="https://github.com/PAIR-code/facets">Facets</a> for visualizing machine learning datasets</li>
+</ul>
+
+<h3 id="jupytertensorflow-notebook">jupyter/tensorflow-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/tensorflow-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/tensorflow-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/tensorflow-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/tensorflow-notebook</code> includes popular Python deep learning libraries.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/scipy-notebook</code> and its ancestor images</li>
+  <li><a href="https://www.tensorflow.org/">tensorflow</a> and <a href="https://keras.io/">keras</a> machine learning
+libraries</li>
+</ul>
+
+<h3 id="jupyterdatascience-notebook">jupyter/datascience-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/datascience-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/datascience-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/datascience-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/datascience-notebook</code> includes libraries for data analysis from the Julia, Python, and R
+communities.</p>
+
+<ul>
+  <li>Everything in the <code class="language-plaintext highlighter-rouge">jupyter/scipy-notebook</code> and <code class="language-plaintext highlighter-rouge">jupyter/r-notebook</code> images, and their ancestor
+images</li>
+  <li>The <a href="https://julialang.org/">Julia</a> compiler and base environment</li>
+  <li><a href="https://github.com/JuliaLang/IJulia.jl">IJulia</a> to support Julia code in Jupyter notebooks</li>
+  <li><a href="https://github.com/JuliaIO/HDF5.jl">HDF5</a>, <a href="http://gadflyjl.org/stable/">Gadfly</a>, and
+<a href="https://github.com/johnmyleswhite/RDatasets.jl">RDatasets</a> packages</li>
+</ul>
+
+<h3 id="jupyterpyspark-notebook">jupyter/pyspark-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/pyspark-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/pyspark-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/pyspark-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/pyspark-notebook</code> includes Python support for Apache Spark.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/scipy-notebook</code> and its ancestor images</li>
+  <li><a href="https://spark.apache.org/">Apache Spark</a> with Hadoop binaries</li>
+</ul>
+
+<h3 id="jupyterall-spark-notebook">jupyter/all-spark-notebook</h3>
+
+<p><a href="https://github.com/jupyter/docker-stacks/tree/master/all-spark-notebook">Source on GitHub</a> |
+<a href="https://github.com/jupyter/docker-stacks/commits/master/all-spark-notebook/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/jupyter/all-spark-notebook/tags/">Docker Hub image tags</a></p>
+
+<p><code class="language-plaintext highlighter-rouge">jupyter/all-spark-notebook</code> includes Python, R, and Scala support for Apache Spark.</p>
+
+<ul>
+  <li>Everything in <code class="language-plaintext highlighter-rouge">jupyter/pyspark-notebook</code> and its ancestor images</li>
+  <li><a href="https://irkernel.github.io/">IRKernel</a> to support R code in Jupyter notebooks</li>
+  <li><a href="https://toree.apache.org/">Apache Toree</a> and
+<a href="https://github.com/maxpoint/spylon-kernel">spylon-kernel</a> to support Scala code in Jupyter
+notebooks</li>
+  <li><a href="http://ggplot2.org/">ggplot2</a>, <a href="http://spark.rstudio.com/">sparklyr</a>, and
+<a href="https://cran.r-project.org/web/packages/RCurl/index.html">rcurl</a> packages</li>
+</ul>
+
+<h3 id="image-relationships">Image Relationships</h3>
+
+<p>The following diagram depicts the build dependency tree of the core images. (i.e., the <code class="language-plaintext highlighter-rouge">FROM</code>
+statements in their Dockerfiles). Any given image inherits the complete content of all ancestor
+images pointing to it.</p>
+
+<p><a href="http://interactive.blockdiag.com/?compression=deflate&amp;src=eJyFzTEPgjAQhuHdX9Gws5sQjGzujsaYKxzmQrlr2msMGv-71K0srO_3XGud9NNA8DSfgzESCFlBSdi0xkvQAKTNugw4QnL6GIU10hvX-Zh7Z24OLLq2SjaxpvP10lX35vCf6pOxELFmUbQiUz4oQhYzMc3gCrRt2cWe_FKosmSjyFHC6OS1AwdQWCtyj7sfh523_BI9hKlQ25YdOFdv5fcH0kiEMA"><img src="../images/inherit.svg" alt="Image inheritance
+diagram" /></a></p>
+
+<h3 id="builds">Builds</h3>
+
+<p>Pull requests to the <code class="language-plaintext highlighter-rouge">jupyter/docker-stacks</code> repository trigger builds of all images on GitHub
+Actions. These images are for testing purposes only and are not saved for use. When pull requests
+merge to master, all images rebuild on Docker Cloud and become available to <code class="language-plaintext highlighter-rouge">docker pull</code> from
+Docker Hub.</p>
+
+<h3 id="versioning">Versioning</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">latest</code> tag in each Docker Hub repository tracks the master branch <code class="language-plaintext highlighter-rouge">HEAD</code> reference on GitHub.
+<code class="language-plaintext highlighter-rouge">latest</code> is a moving target, by definition, and will have backward-incompatible changes regularly.</p>
+
+<p>Every image on Docker Hub also receives a 12-character tag which corresponds with the git commit SHA
+that triggered the image build. You can inspect the state of the <code class="language-plaintext highlighter-rouge">jupyter/docker-stacks</code> repository
+for that commit to review the definition of the image (e.g., images with tag 7c45ec67c8e7 were built
+from
+<a href="https://github.com/jupyter/docker-stacks/tree/7c45ec67c8e7">https://github.com/jupyter/docker-stacks/tree/7c45ec67c8e7</a>).</p>
+
+<p>You must refer to git-SHA image tags when stability and reproducibility are important in your work.
+(e.g. <code class="language-plaintext highlighter-rouge">FROM jupyter/scipy-notebook:7c45ec67c8e7</code>,
+<code class="language-plaintext highlighter-rouge">docker run -it --rm jupyter/scipy-notebook:7c45ec67c8e7</code>). You should only use <code class="language-plaintext highlighter-rouge">latest</code> when a
+one-off container instance is acceptable (e.g., you want to briefly try a new library in a
+notebook).</p>
+
+<h2 id="community-stacks">Community Stacks</h2>
+
+<p>The core stacks are just a tiny sample of what’s possible when combining Jupyter with other
+technologies. We encourage members of the Jupyter community to create their own stacks based on the
+core images and link them below.</p>
+
+<ul>
+  <li>
+    <p><a href="https://github.com/tlinnet/csharp-notebook">csharp-notebook is a community Jupyter Docker Stack image. Try C# in Jupyter Notebooks</a>.
+The image includes more than 200 Jupyter Notebooks with example C# code and can readily be tried
+online via mybinder.org. Click here to launch
+<a href="https://mybinder.org/v2/gh/tlinnet/csharp-notebook/master"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a>.</p>
+  </li>
+  <li>
+    <p><a href="https://github.com/umsi-mads/education-notebook">education-notebook is a community Jupyter Docker Stack image</a>.
+The image includes nbgrader and RISE on top of the datascience-notebook image. Click here to
+launch it on
+<a href="https://mybinder.org/v2/gh/umsi-mads/education-notebook/master"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a>.</p>
+  </li>
+  <li>
+    <p><strong>crosscompass/ihaskell-notebook</strong></p>
+
+    <p><a href="https://github.com/jamesdbrock/ihaskell-notebook">Source on GitHub</a> |
+<a href="https://github.com/jamesdbrock/ihaskell-notebook/commits/master/Dockerfile">Dockerfile commit history</a>
+| <a href="https://hub.docker.com/r/crosscompass/ihaskell-notebook/tags">Docker Hub image tags</a></p>
+
+    <p><code class="language-plaintext highlighter-rouge">crosscompass/ihaskell-notebook</code> is based on <a href="https://github.com/gibiansky/IHaskell">IHaskell</a>.
+Includes popular packages and example notebooks.</p>
+
+    <p>Try it on
+<a href="https://mybinder.org/v2/gh/jamesdbrock/learn-you-a-haskell-notebook/master?urlpath=lab/tree/ihaskell_examples/ihaskell/IHaskell.ipynb"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a></p>
+  </li>
+  <li>
+    <p><a href="https://github.com/jbindinga/java-notebook">java-notebook is a community Jupyter Docker Stack image</a>.
+The image includes <a href="https://github.com/SpencerPark/IJava">IJava</a> kernel on top of the
+minimal-notebook image. Click here to launch it on
+<a href="https://mybinder.org/v2/gh/jbindinga/java-notebook/master"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a>.</p>
+  </li>
+  <li>
+    <p><a href="https://github.com/sharpTrick/sage-notebook">sage-notebook</a> is a community Jupyter Docker Stack
+image with the <a href="https://sagemath.org">sagemath</a> kernel on top of the minimal-notebook image. Click
+here to launch it on
+<a href="https://mybinder.org/v2/gh/sharpTrick/sage-notebook/master"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a>.</p>
+  </li>
+  <li>
+    <p><a href="https://github.com/iot-salzburg/gpu-jupyter/">GPU-Jupyter</a>: Leverage Jupyter Notebooks with the
+power of your NVIDIA GPU and perform GPU calculations using Tensorflow and Pytorch in
+collaborative notebooks. This is done by generating a Dockerfile, that consists of the
+<strong>nvidia/cuda</strong> base image, the well-maintained <strong>docker-stacks</strong> that is integrated as submodule
+and GPU-able libraries like <strong>Tensorflow</strong>, <strong>Keras</strong> and <strong>PyTorch</strong> on top of it.</p>
+  </li>
+  <li>
+    <p><a href="https://github.com/SCiO-systems/cgspatial-notebook">cgspatial-notebook</a> is a community Jupyter
+Docker Stack image. The image includes major geospatial Python &amp; R libraries on top of the
+datascience-notebook image. Try it on
+binder:<a href="https://mybinder.org/v2/gh/SCiO-systems/cgspatial-notebook/master"><img src="https://mybinder.org/badge_logo.svg" alt="Binder" /></a></p>
+  </li>
+</ul>
+
+<p>See the <a href="/subrepos/docker-stacks/docs/contributing/stacks.html">contributing guide</a> for information about how to create your own
+Jupyter Docker Stack.</p>
+
+  </div>
+
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Scaling Python ML</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Scaling Python ML</li><li><a class="u-email" href="mailto:holden@pigscanfly.ca">holden@pigscanfly.ca</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list">
+  <li><a href="https://github.com/scalingpythonml"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">scalingpythonml</span></a></li><li><a href="https://www.twitter.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">holdenkarau</span></a></li><li><a href="https://youtube.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#youtube"></use></svg> <span class="username">holdenkarau</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Blog of my adventures working with different tools for scaling Python ML workloads.</p>
+      </div>
+    </div>
+
+    <br />
+
+    If you enjoy this work and have some extra $s, consider sponsoring <a href="https://github.com/sponsors/holdenk">my OSS work</a>.
+
+    <!-- Disclamer -->
+
+    This blog does not represent any of my employers, software projects, or foundations I'm a part of.
+    I am one of the developers of Apache Spark <a href="https://amzn.to/2O6KYYH">and have some books published on the topic</a> <a href="https://amzn.to/2IA6Yf0">(plus a new Kubeflow book)</a> that may influence my views.
+    Some of the links on this blog may generate an affiliate commission. I also earn royalties from my books.
+    Generally speaking these do not cover the amount I spend on these adventures, but help defray my hardware, <a href="https://amzn.to/31mIOeK">coffee</a>, and <a href="https://dynamodonut.com/">artisinal doughnut</a> costs.
+
+<!-- License -->
+    <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />The posts on this blog are licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>. <br />
+
+<!-- Fork me on github -->
+<a href="https://github.com/scalingpythonml/scalingpythonml.github.io" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

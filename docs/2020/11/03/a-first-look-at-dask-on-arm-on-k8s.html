@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>A First Look at Dask on ARM on K8s | Scaling Python ML</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="A First Look at Dask on ARM on K8s" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice)." />
+<meta property="og:description" content="After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice)." />
+<meta property="og:site_name" content="Scaling Python ML" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-11-03T00:00:00+00:00" />
+<script type="application/ld+json">
+{"datePublished":"2020-11-03T00:00:00+00:00","dateModified":"2020-11-03T00:00:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are das-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","headline":"A First Look at Dask on ARM on K8s","@type":"BlogPosting","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
+
+  <script>
+  function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+  window.onload = wrap_img;
+  </script>
+
+</head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Scaling Python ML</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about.html">About</a><a class="page-link" href="/mailinglist.html">Mailinglist</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">A First Look at Dask on ARM on K8s</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-11-03T00:00:00+00:00" itemprop="datePublished">Nov 3, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are <a href="https://github.com/dask/dask-kubernetes">das-kubernetes</a> and <a href="https://github.com/dask/dask-docker">dask-docker</a> projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_getting-dask-on-arm-in-docker">Getting Dask on ARM in Docker</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The dask-docker project gives us a good starting point for building a container for Dask, but the project&#8217;s containers are only built for amd64. I started off by trying to rebuild the containers without any modifications, but it turned out there were a few issues that I needed to address. The first is that the regular conda docker image is also only built for amd64. Secondly, some of the packages that the Dask container uses are also not yet cross-built. While these problems will likely go away over the coming year, for the time being, I solved these issues by making a multi-platform condaforge docker container, asking folks to rebuild packages, and, when the packages did not get rebuilt, installing from source.</p>
+</div>
+<div class="paragraph">
+<p>To do this I created a new Dockerfile for replacing miniconda base with miniforge:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="dockerfile">FROM debian:buster-slim
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV PATH /opt/conda/bin:$PATH
+
+RUN apt-get update --fix-missing &amp;&amp; \
+    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;&amp; \
+    apt-get clean
+
+COPY setup.sh /setup.sh
+RUN /setup.sh
+CMD [ "/bin/bash" ]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Most of the logic lives in this setup script:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="sh">#!/bin/bash
+
+set -ex
+export arch=$(uname -m)
+if [ "$arch" == "aarm64" ]; then
+  arch="arm64";
+fi
+wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O ~/miniforge.sh
+chmod a+x ~/miniforge.sh
+~/miniforge.sh -b -p /opt/conda
+/opt/conda/bin/conda clean -tipsy
+ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+echo ". /opt/conda/etc/profile.d/conda.sh" &gt;&gt; ~/.bashrc
+echo "conda activate base" &gt;&gt; ~/.bashrc
+source ~/.bashrc
+find /opt/conda/ -follow -type f -name '*.a' -delete
+find /opt/conda/ -follow -type f -name '*.js.map' -delete
+/opt/conda/bin/conda clean -afy
+/opt/conda/bin/conda install --yes nomkl cytoolz cmake tini
+/opt/conda/bin/conda init bash
+/opt/conda/bin/conda install --yes mamba</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>I chose to install mamba, a fast C++ reimplementation of conda, and use this to install the rest of the packages. I did this since debugging the package conflicts with the regular conda program was resulting in confusing error messages, and mamba can have clearer error messages. I created a new version of the "base" Dockerfile, from dask-docker, which installed the packages with mamba and pip when not available from conda.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="dockerfile">FROM  holdenk/miniforge:v0.3
+
+SHELL ["/bin/bash", "-c"]
+
+ENV PATH /opt/conda/bin:$PATH
+
+RUN apt-get update --force-yes  -y --fix-missing &amp;&amp; \
+    apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &amp;&amp; \
+    apt-get install --force-yes -y build-essential cmake libcurl4 libcurl4-openssl-dev libblosc-dev libblosc1 python3-blosc python3-dev &amp;&amp; \
+    apt-get upgrade --force-yes -y &amp;&amp; \
+    apt-get clean
+
+RUN mamba install --yes python==3.8.6 \
+    &amp;&amp; mamba install --yes \
+    cytoolz \
+    dask==2.30.0 \
+    dask-core==2.30.0 \
+    lz4 \
+    numpy==1.19.2 \
+    pandas \
+    tini \
+    scikit-build \
+    python-blosc=1.9.2 \
+    pyzmq \
+    &amp;&amp; mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow\
+    &amp;&amp; mamba install --yes bokeh \
+    &amp;&amp; (mamba install --yes aiohttp==3.7.1 || pip install aiohttp==3.7.1 ) \
+    &amp;&amp; (mamba install --yes jupyter-server-proxy || pip install jupyter-server-proxy) \
+    &amp;&amp; (mamba install --yes llvmlite numba ) \
+    &amp;&amp; (mamba install --yes fastparquet || pip install fastparquet) \
+    &amp;&amp; find /opt/conda/ -type f,l -name '*.a' -delete \
+    &amp;&amp; find /opt/conda/ -type f,l -name '*.pyc' -delete \
+    &amp;&amp; find /opt/conda/ -type f,l -name '*.js.map' -delete \
+    &amp;&amp; find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name '*.js' -not -name '*.min.js' -delete \
+    &amp;&amp; rm -rf /opt/conda/pkgs
+
+# pyzmq is installed explicitly so we don't have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won't install from conda directly
+
+COPY prepare.sh /usr/bin/prepare.sh
+
+RUN mkdir /opt/app
+
+ENTRYPOINT ["tini", "-g", "--", "/usr/bin/prepare.sh"]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>One interesting thing I noticed while exploring this is the link::https://github.com/dask/dask-docker/blob/master/base/prepare.sh[prepare.sh script] that is used as the entry point for the container. This script checks a few different environment variables that, when present, are used to install additional packages (Python or system) at container startup. While normally putting all of the packages into a container is best (since installations can be flaky and slow), this does allow for faster experimentation. At first glance, it seems like this still requires a Dask cluster restart to add a new package, but I&#8217;m going to do more exploring here.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_getting-dask-on-kube">Getting Dask on Kube</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>With the containers built, the next step was trying to get them running on Kubernetes. I first tried the helm installation, but I wasn&#8217;t super sure how to configure it to use my new custom containers and the documentation also contained warnings indicating that Dask with helm did not play well with dynamic scaling. Since I&#8217;m really interested in exploring how the different systems support dynamic scaling, I decided to install the dask-kubernetes project. With dask-kubernetes, I can create a cluster by running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="python">cluster = KubeCluster.from_yaml('worker-spec.yaml')</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As I was setting this up, I realized it was creating resources in the default namespace, which made keeping track of everything difficult. So I created a namespace, service account, and role binding so that I could better keep track of (and clean up) everything:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="python">kubectl create namespace dask
+kubectl create serviceaccount dask --namespace dask
+kubectl apply -f setup.yaml
+kubectl create rolebinding dask-sa-binding --namespace dask --role=daskKubernetes --user=dask:dask</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To use this, I rewrote added another parameter to cluster creation and updated the yaml:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="python">cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask')</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The from_yaml is important, as it lets me specify specific containers and resource requests (which will be useful when working with GPUs). I modified the standard worker-spec to use the namespace and service account I created.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="yaml"># worker-spec.yml
+
+kind: Pod
+metadata:
+  namespace: dask
+  labels:
+    foo: bar5
+spec:
+  restartPolicy: Never
+# Added by holden
+  serviceAccountName: dask
+  automountServiceAccountToken: true
+# End added by Holden
+  containers:
+# Configure for dual arch
+  - image: holdenk/dask-base:v0.9.1
+    imagePullPolicy: IfNotPresent
+    args: [dask-worker, --nthreads, '2', --no-dashboard, --memory-limit, 6GB, --death-timeout, '60']
+    name: dask
+    #env:
+    #  - name: EXTRA_PIP_PACKAGES
+    #    value: git+https://github.com/dask/distributed
+    resources:
+      limits:
+        cpu: "2"
+        memory: 8G
+      requests:
+        cpu: "2"
+        memory: 8G</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>While this would work if I was <em>inside</em> the Kubernetes cluster I wanted to start with an experimental notebook outside the cluster. This required some changes, and in retrospect is not where I should have started.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dask-in-kube-with-notebook-access">Dask in Kube with Notebook access</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are two primary considerations when setting up Dask for notebook access on Kube. The first is where you want your notebook to run, inside the Kubernetes cluster or outside (e.g. on your machine). The second consideration is if you want the Dask scheduler to run alongside your notebook, or in a separate container inside of Kube.</p>
+</div>
+<div class="paragraph">
+<p>The first configuration I tried was having a notebook on my local machine. At first, I could not get it working because the scheduler was running on my local machine and could not talk to the worker pods it spun up. That&#8217;s why, unless you&#8217;re using host networking, I recommend having the scheduler run inside the cluster. Doing this involves adding a "deploy_mode" keyword to your KubeCluster invocation and asking Dask to create a service for your notebook to talk to the scheduler.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="python"># In[2]:
+
+
+# Specify a remote deployment using a load blanacer, necessary for communication with notebook from cluster
+dask.config.set({"kubernetes.scheduler-service-type": "LoadBalancer"})
+
+
+# In[4]:
+
+
+cluster = KubeCluster.from_yaml('worker-spec.yaml', namespace='dask', deploy_mode='remote')
+
+
+# In[ ]:</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Running your notebook on a local machine <em>may</em> make getting started faster, but it comes with some downsides. It&#8217;s important that you keep your client&#8217;s python environment in sync with the worker/base containers. For me setting up my conda env, I ended up having to run:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="python">sudo /opt/conda/bin/conda install -c conda-forge --all --yes mamba
+mamba install --yes python==3.8.6 cytoolz dask==2.30.0 dask-core==2.30.0 lz4 numpy==1.19.2 pandas tini \
+      scikit-build python-blosc=1.9.2 pyzmq s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs \
+      pygit2 pyarrow bokeh aiottp==3.7.1 llvmlite numba fastparquet</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Another big issue you&#8217;ll likely run into is that transient network errors between your notebook and the cluster can result in non-recoverable errors. This has happened to me even with networking all inside my house, so I can imagine that it would be even more common with a VPN or a cloud provider network involved.</p>
+</div>
+<div class="paragraph">
+<p>The final challenge that I ran into was with I/O. Some code will run in the workers and some will run on the client, and if your workers and client have a different network view or if there are resources that are only available inside the cluster (for me MinIO), the error messages can be confusing <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup>.</p>
+</div>
+<div class="paragraph">
+<p>Note: you don&#8217;t have to use Dask with Kubernetes, or even a cluster. If you don&#8217;t have a cluster, or have a problem where a cluster might not be the best solution, Dask also supports other execution environments like multithreading and GPU acceleration. I&#8217;m personally excited to see how the GPU acceleration can be used together with Kubernetes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the-different-apis">The different APIs</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dask exposes a few different APIs for distributed programming at different levels of abstraction. Dask&#8217;s "core" building block is the delayed API, on top of which collections and DataFrame support is built. The delayed API is notably a lower level API than Spark&#8217;s low level public APIs&#8201;&#8212;&#8201;and I&#8217;m super interested to see what kind of things it enables us to do.</p>
+</div>
+<div class="paragraph">
+<p>Dask has three different types of distributed collection APIs: Bag, DataFrame, and Array. These distributed collections map relatively nicely to common Python concepts, and the DataFrame API is especially familiar.</p>
+</div>
+<div class="paragraph">
+<p>Almost <sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]</sup> separate from the delayed and collections APIs, Dask also has an (experimental) Actor API. I&#8217;m curious to see how this API continues to be developed and used. I&#8217;d really like to see if I can use it as a parameter server.</p>
+</div>
+<div class="paragraph">
+<p>To verify my cluster was properly set up I did a quick run through the tutorials for the different APIs.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next-steps">Next Steps</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Now that I&#8217;ve got Dask on Kube running on my cluster I want to do some cleanup and then explore more about how Dask handles dataframes, partitioning/distributing data/tasks, auto scaling, and GPU acceleration. If you&#8217;ve got any suggestions for things you&#8217;d like me to try out, do please get in touch :)</p>
+</div>
+</div>
+</div>
+<div id="footnotes">
+<hr>
+<div class="footnote" id="_footnotedef_1">
+<a href="#_footnoteref_1">1</a>. I worked around this by setting up port-forwarding so that the network environment was the same between my local machine and the cluster. You could also expose the internal-only resources through a service and have internal &amp; external access through the service, but I just wanted a quick stop-gap. This challenge convinced me I should re-run with my notebook inside the cluster.
+</div>
+<div class="footnote" id="_footnotedef_2">
+<a href="#_footnoteref_2">2</a>. You can use the actor API within the other APIs, but it is not part of the same building blocks.
+</div>
+</div>
+  </div><a class="u-url" href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Scaling Python ML</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Scaling Python ML</li><li><a class="u-email" href="mailto:holden@pigscanfly.ca">holden@pigscanfly.ca</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list">
+  <li><a href="https://github.com/scalingpythonml"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">scalingpythonml</span></a></li><li><a href="https://www.twitter.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">holdenkarau</span></a></li><li><a href="https://youtube.com/holdenkarau"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#youtube"></use></svg> <span class="username">holdenkarau</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Blog of my adventures working with different tools for scaling Python ML workloads.</p>
+      </div>
+    </div>
+
+    <br />
+
+    If you enjoy this work and have some extra $s, consider sponsoring <a href="https://github.com/sponsors/holdenk">my OSS work</a>.
+
+    <!-- Disclamer -->
+
+    This blog does not represent any of my employers, software projects, or foundations I'm a part of.
+    I am one of the developers of Apache Spark <a href="https://amzn.to/2O6KYYH">and have some books published on the topic</a> <a href="https://amzn.to/2IA6Yf0">(plus a new Kubeflow book)</a> that may influence my views.
+    Some of the links on this blog may generate an affiliate commission. I also earn royalties from my books.
+    Generally speaking these do not cover the amount I spend on these adventures, but help defray my hardware, <a href="https://amzn.to/31mIOeK">coffee</a>, and <a href="https://dynamodonut.com/">artisinal doughnut</a> costs.
+
+<!-- License -->
+    <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />The posts on this blog are licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>. <br />
+
+<!-- Fork me on github -->
+<a href="https://github.com/scalingpythonml/scalingpythonml.github.io" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
