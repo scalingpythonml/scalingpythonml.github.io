@@ -5,7 +5,7 @@
 # Use bash for inline if-statements in arch_patch target
 SHELL:=bash
 ARCH:=$(shell uname -m)
-OWNER?=jupyter
+OWNER?=holdenk
 
 # Need to list the images in build dependency order
 ifeq ($(ARCH),ppc64le)
@@ -50,7 +50,7 @@ arch_patch/%: ## apply hardware architecture specific patches to the Dockerfile
 
 build/%: DARGS?=
 build/%: ## build the latest image for a stack
-	docker build $(DARGS) --rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@)
+	docker buildx build $(DARGS) --rm --force-rm -t $(OWNER)/$(notdir $@):latest ./$(notdir $@) --push --platform linux/arm64,linux/amd64
 	@echo -n "Built image size: "
 	@docker images $(OWNER)/$(notdir $@):latest --format "{{.Size}}"
 

@@ -4,7 +4,7 @@
 # Ubuntu 20.04 (focal)
 # https://hub.docker.com/_/ubuntu/?tab=tags&name=focal
 # OS/ARCH: linux/amd64
-ARG ROOT_CONTAINER=ubuntu:focal-20210119@sha256:3093096ee188f8ff4531949b8f6115af4747ec1c58858c091c8cb4579c39cc4e
+ARG ROOT_CONTAINER=ubuntu:focal
 
 ARG BASE_CONTAINER=$ROOT_CONTAINER
 FROM $BASE_CONTAINER
@@ -29,7 +29,7 @@ ARG conda_version="4.9.2"
 ARG miniforge_patch_number="5"
 # Miniforge installer architecture
 ARG miniforge_arch="x86_64"
-# Python implementation to use 
+# Python implementation to use
 # can be either Miniforge3 to use Python or Miniforge-pypy3 to use PyPy
 ARG miniforge_python="Miniforge3"
 
@@ -78,7 +78,7 @@ RUN chmod a+rx /usr/local/bin/fix-permissions
 # hadolint ignore=SC2016
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc && \
    # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
-   echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc 
+   echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc
 
 # Create NB_USER with name jovyan user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
@@ -101,12 +101,14 @@ RUN mkdir "/home/$NB_USER/work" && \
 
 # Install conda as jovyan and check the sha256 sum provided on the download site
 WORKDIR /tmp
-
-# Prerequisites installation: conda, pip, tini
-RUN wget --quiet "https://github.com/conda-forge/miniforge/releases/download/${miniforge_version}/${miniforge_installer}" && \
-    echo "${miniforge_checksum} *${miniforge_installer}" | sha256sum --check && \
-    /bin/bash "${miniforge_installer}" -f -b -p $CONDA_DIR && \
-    rm "${miniforge_installer}" && \
+RUN export arch=$(uname -m) && \
+    if [ "$arch" == "aarm64" ]; then \
+      arch="arm64"; \
+    fi; \
+    wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O miniforge.sh && \
+    chmod a+x miniforge.sh && \
+    ./miniforge.sh -f -b -p $CONDA_DIR && \
+    rm miniforge.sh && \
     # Conda configuration see https://conda.io/projects/conda/en/latest/configuration.html
     echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
     conda config --system --set auto_update_conda false && \
