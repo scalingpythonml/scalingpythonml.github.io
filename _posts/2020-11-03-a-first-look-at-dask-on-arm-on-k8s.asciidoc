@@ -1,7 +1,7 @@
 = A First Look at Dask on ARM on K8s
 :uri-asciidoctor: http://asciidoctor.org
 
-After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are link:$$https://github.com/dask/dask-kubernetes$$[das-kubernetes] and link:$$https://github.com/dask/dask-docker$$[dask-docker] projects that provide the framework to do this. Since I'm still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).
+After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are link:$$https://github.com/dask/dask-kubernetes$$[dask-kubernetes] and link:$$https://github.com/dask/dask-docker$$[dask-docker] projects that provide the framework to do this. Since I'm still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).
 
 
 
