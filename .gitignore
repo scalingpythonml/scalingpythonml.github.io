@@ -7,3 +7,7 @@
 vendor
 _notebooks/.ipynb_checkpoints
 .bundle
+_site
+# Don't need these:
+_site/subrepos/
+_site/update_subtrees.sh
