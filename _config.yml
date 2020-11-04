@@ -49,9 +49,10 @@ header_pages:
   - about.md
   - mailinglist.md
 
-gems:
+plugins:
   - jekyll-asciidoc
-
+  - jekyll-sitemap
+    
 asciidoctor:
   attributes:
   - idprefix=_
