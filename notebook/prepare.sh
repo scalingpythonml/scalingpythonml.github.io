@@ -29,7 +29,7 @@ if [ "$EXTRA_PIP_PACKAGES" ]; then
     /opt/conda/bin/pip install $EXTRA_PIP_PACKAGES
 fi
 
-start.sh jupyter lab
+#start.sh jupyter lab
 
 # Run extra commands
 exec "$@"
