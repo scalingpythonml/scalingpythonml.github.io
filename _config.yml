@@ -51,3 +51,9 @@ header_pages:
 
 gems:
   - jekyll-asciidoc
+
+asciidoctor:
+  attributes:
+  - idprefix=_
+  - source-highlighter=pygments
+  - pygments-css=style
