@@ -3,17 +3,17 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>A First Look At Dask On Arm On K8s | Scaling Python ML</title>
+<title>A First Look at Dask on ARM on K8s | Scaling Python ML</title>
 <meta name="generator" content="Jekyll v3.9.0" />
-<meta property="og:title" content="A First Look At Dask On Arm On K8s" />
+<meta property="og:title" content="A First Look at Dask on ARM on K8s" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="safe: :unsafe" />
-<meta property="og:description" content="safe: :unsafe" />
+<meta name="description" content="After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice)." />
+<meta property="og:description" content="After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice)." />
 <meta property="og:site_name" content="Scaling Python ML" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-11-03T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","headline":"A First Look At Dask On Arm On K8s","dateModified":"2020-11-03T00:00:00-08:00","datePublished":"2020-11-03T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"description":"safe: :unsafe","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","headline":"A First Look at Dask on ARM on K8s","dateModified":"2020-11-03T00:00:00-08:00","datePublished":"2020-11-03T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- favicon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -69,19 +69,19 @@
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">A First Look At Dask On Arm On K8s</h1>
+    <h1 class="post-title p-name" itemprop="name headline">A First Look at Dask on ARM on K8s</h1>
     <p class="post-meta">
       <time class="dt-published" datetime="2020-11-03T00:00:00-08:00" itemprop="datePublished">Nov 3, 2020
       </time></p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
-    <div class="paragraph">
-<p>safe: :unsafe</p>
-</div>
-<h1 id="_a-first-look-at-dask-on-arm-on-k8s" class="sect0">A First Look at Dask on ARM on K8s</h1>
+    <div id="preamble">
+<div class="sectionbody">
 <div class="paragraph">
 <p>After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are <a href="https://github.com/dask/dask-kubernetes">dask-kubernetes</a> and <a href="https://github.com/dask/dask-docker">dask-docker</a> projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</p>
+</div>
+</div>
 </div>
 <div class="sect1">
 <h2 id="_getting-dask-on-arm-in-docker">Getting Dask on ARM in Docker</h2>
