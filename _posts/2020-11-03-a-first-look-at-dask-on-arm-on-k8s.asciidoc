@@ -1,3 +1,5 @@
+safe: :unsafe
+
 = A First Look at Dask on ARM on K8s
 :uri-asciidoctor: http://asciidoctor.org
 
@@ -128,10 +130,9 @@ Dask has three different types of distributed collection APIs: Bag, DataFrame, a
 Almost footnote:[You can use the actor API within the other APIs, but it is not part of the same building blocks.] separate from the delayed and collections APIs, Dask also has an (experimental) Actor API. I'm curious to see how this API continues to be developed and used. I'd really like to see if I can use it as a parameter server.
 
 
-To verify my cluster was properly set up I did a quick run through the tutorials for the different APIs. 
+To verify my cluster was properly set up I did a quick run through the tutorials for the different APIs.
 
 
 == Next Steps
 
 Now that I've got Dask on Kube running on my cluster I want to do some cleanup and then explore more about how Dask handles dataframes, partitioning/distributing data/tasks, auto scaling, and GPU acceleration. If you've got any suggestions for things you'd like me to try out, do please get in touch :)
-
