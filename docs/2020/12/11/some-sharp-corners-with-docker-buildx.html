@@ -13,7 +13,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-12-11T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/12/11/some-sharp-corners-with-docker-buildx.html"},"url":"/2020/12/11/some-sharp-corners-with-docker-buildx.html","headline":"Some sharp corners with docker buildx (especially with qemu)","dateModified":"2020-12-11T00:00:00-08:00","datePublished":"2020-12-11T00:00:00-08:00","description":"Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.","@context":"https://schema.org"}</script>
+{"datePublished":"2020-12-11T00:00:00-08:00","@type":"BlogPosting","dateModified":"2020-12-11T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/12/11/some-sharp-corners-with-docker-buildx.html"},"url":"/2020/12/11/some-sharp-corners-with-docker-buildx.html","description":"Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.","headline":"Some sharp corners with docker buildx (especially with qemu)","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
@@ -80,16 +80,15 @@
 
 <p>Don’t despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don’t have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn’t already have Docker on it, install Docker. Once you’ve set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:</p>
 
-<h2 id="source-bash">[source, bash]</h2>
-<p>docker context create jetson-nano-ctx –docker host=ssh://root@192.168.3.125
-—-</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker context create jetson-nano-ctx <span class="nt">--docker</span> <span class="nv">host</span><span class="o">=</span>ssh://root@192.168.3.125
+</code></pre></div></div>
 
 <p>Once you have a remote context, you can use it in a “build instance.” If you have QEMU locally, as I do, it’s important that the remote context is set to be used, since otherwise, we will still try to build with emulation.</p>
 
-<h2 id="source-bash-1">[source, bash]</h2>
-<p>docker buildx create –use –name mybuild-combined-builder jetson-nano-ctx</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker buildx create <span class="nt">--use</span> <span class="nt">--name</span> mybuild-combined-builder jetson-nano-ctx 
 
-<h2 id="docker-buildx-create-append-name-mybuild-combined-builder">docker buildx create –append –name mybuild-combined-builder</h2>
+docker buildx create <span class="nt">--append</span> <span class="nt">--name</span> mybuild-combined-builder
+</code></pre></div></div>
 
 <p>Another random sharp edge that I’ve run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., “failed to solve: rpc error: code = Unknown desc = failed commit on ref”). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching – but that’s just a hunch.</p>
 
