@@ -13,7 +13,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-11-03T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","dateModified":"2020-11-03T00:00:00-08:00","datePublished":"2020-11-03T00:00:00-08:00","headline":"A First Look at Dask on ARM on K8s","url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html"},"url":"/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html","headline":"A First Look at Dask on ARM on K8s","dateModified":"2020-11-03T00:00:00-08:00","datePublished":"2020-11-03T00:00:00-08:00","description":"After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
@@ -88,16 +88,16 @@
 <div class="content">
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121"> debian:buster-slim</span>
 
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> LANG=C.UTF-8 LC_ALL=C.UTF-8</span>
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH /opt/conda/bin:$PATH</span>
+<span style="color: #008000; font-weight: bold">ENV</span> <span style="color: #19177C">LANG</span><span style="color: #666666">=</span>C.UTF-8 <span style="color: #19177C">LC_ALL</span><span style="color: #666666">=</span>C.UTF-8
+<span style="color: #008000; font-weight: bold">ENV</span> PATH /opt/conda/bin:<span style="color: #19177C">$PATH</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> apt-get update --fix-missing <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     apt-get clean
 
-COPY setup.sh /setup.sh
+<span style="color: #008000; font-weight: bold">COPY</span> setup.sh /setup.sh
 <span style="color: #008000; font-weight: bold">RUN</span> /setup.sh
-<span style="color: #008000; font-weight: bold">CMD</span><span style="color: #BA2121"> [ &quot;/bin/bash&quot; ]</span></code></pre>
+<span style="color: #008000; font-weight: bold">CMD</span> [ <span style="color: #BA2121">&quot;/bin/bash&quot;</span> ]</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -135,9 +135,9 @@ find /opt/conda/ -follow -type f -name <span style="color: #BA2121">&#39;*.js.ma
 <div class="content">
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/miniforge:v0.3</span>
 
-SHELL <span style="color: #666666">[</span><span style="color: #BA2121">&quot;/bin/bash&quot;</span>, <span style="color: #BA2121">&quot;-c&quot;</span><span style="color: #666666">]</span>
+<span style="color: #008000; font-weight: bold">SHELL</span> [<span style="color: #BA2121">&quot;/bin/bash&quot;</span>, <span style="color: #BA2121">&quot;-c&quot;</span>]
 
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH /opt/conda/bin:$PATH</span>
+<span style="color: #008000; font-weight: bold">ENV</span> PATH /opt/conda/bin:<span style="color: #19177C">$PATH</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> apt-get update --force-yes  -y --fix-missing <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
@@ -171,11 +171,11 @@ SHELL <span style="color: #666666">[</span><span style="color: #BA2121">&quot;/b
 
 <span style="color: #408080; font-style: italic"># pyzmq is installed explicitly so we don&#39;t have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won&#39;t install from conda directly</span>
 
-COPY prepare.sh /usr/bin/prepare.sh
+<span style="color: #008000; font-weight: bold">COPY</span> prepare.sh /usr/bin/prepare.sh
 
 <span style="color: #008000; font-weight: bold">RUN</span> mkdir /opt/app
 
-<span style="color: #008000; font-weight: bold">ENTRYPOINT</span><span style="color: #BA2121"> [&quot;tini&quot;, &quot;-g&quot;, &quot;--&quot;, &quot;/usr/bin/prepare.sh&quot;]</span></code></pre>
+<span style="color: #008000; font-weight: bold">ENTRYPOINT</span> [<span style="color: #BA2121">&quot;tini&quot;</span>, <span style="color: #BA2121">&quot;-g&quot;</span>, <span style="color: #BA2121">&quot;--&quot;</span>, <span style="color: #BA2121">&quot;/usr/bin/prepare.sh&quot;</span>]</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -220,33 +220,33 @@ kubectl create rolebinding dask<span style="color: #666666">-</span>sa<span styl
 <div class="content">
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #408080; font-style: italic"># worker-spec.yml</span>
 
-kind: Pod
-metadata:
-  namespace: dask
-  labels:
-    foo: bar5
-spec:
-  restartPolicy: Never
+<span style="color: #008000; font-weight: bold">kind</span>: Pod
+<span style="color: #008000; font-weight: bold">metadata</span>:
+  <span style="color: #008000; font-weight: bold">namespace</span>: dask
+  <span style="color: #008000; font-weight: bold">labels</span>:
+    <span style="color: #008000; font-weight: bold">foo</span>: bar5
+<span style="color: #008000; font-weight: bold">spec</span>:
+  <span style="color: #008000; font-weight: bold">restartPolicy</span>: Never
 <span style="color: #408080; font-style: italic"># Added by holden</span>
-  serviceAccountName: dask
-  automountServiceAccountToken: true
+  <span style="color: #008000; font-weight: bold">serviceAccountName</span>: dask
+  <span style="color: #008000; font-weight: bold">automountServiceAccountToken</span>: true
 <span style="color: #408080; font-style: italic"># End added by Holden</span>
-  containers:
+  <span style="color: #008000; font-weight: bold">containers</span>:
 <span style="color: #408080; font-style: italic"># Configure for dual arch</span>
-  - image: holdenk/dask-base:v0.9.1
-    imagePullPolicy: IfNotPresent
-    args: [<span style="color: #19177C">dask-worker</span>, <span style="color: #19177C">--nthreads</span>, <span style="color: #BA2121">&#39;2&#39;</span>, <span style="color: #19177C">--no-dashboard</span>, <span style="color: #19177C">--memory-limit</span>, <span style="color: #19177C">6GB</span>, <span style="color: #19177C">--death-timeout</span>, <span style="color: #BA2121">&#39;60&#39;</span>]
-    name: dask
+  - <span style="color: #008000; font-weight: bold">image</span>: holdenk/dask-base:v0.9.1
+    <span style="color: #008000; font-weight: bold">imagePullPolicy</span>: IfNotPresent
+    <span style="color: #008000; font-weight: bold">args</span>: [<span style="color: #19177C">dask-worker</span>, <span style="color: #19177C">--nthreads</span>, <span style="color: #BA2121">&#39;2&#39;</span>, <span style="color: #19177C">--no-dashboard</span>, <span style="color: #19177C">--memory-limit</span>, <span style="color: #19177C">6GB</span>, <span style="color: #19177C">--death-timeout</span>, <span style="color: #BA2121">&#39;60&#39;</span>]
+    <span style="color: #008000; font-weight: bold">name</span>: dask
     <span style="color: #408080; font-style: italic">#env:</span>
     <span style="color: #408080; font-style: italic">#  - name: EXTRA_PIP_PACKAGES</span>
     <span style="color: #408080; font-style: italic">#    value: git+https://github.com/dask/distributed</span>
-    resources:
-      limits:
-        cpu: <span style="color: #BA2121">&quot;2&quot;</span>
-        memory: 8G
-      requests:
-        cpu: <span style="color: #BA2121">&quot;2&quot;</span>
-        memory: 8G</code></pre>
+    <span style="color: #008000; font-weight: bold">resources</span>:
+      <span style="color: #008000; font-weight: bold">limits</span>:
+        <span style="color: #008000; font-weight: bold">cpu</span>: <span style="color: #BA2121">&quot;2&quot;</span>
+        <span style="color: #008000; font-weight: bold">memory</span>: 8G
+      <span style="color: #008000; font-weight: bold">requests</span>:
+        <span style="color: #008000; font-weight: bold">cpu</span>: <span style="color: #BA2121">&quot;2&quot;</span>
+        <span style="color: #008000; font-weight: bold">memory</span>: 8G</code></pre>
 </div>
 </div>
 <div class="paragraph">
