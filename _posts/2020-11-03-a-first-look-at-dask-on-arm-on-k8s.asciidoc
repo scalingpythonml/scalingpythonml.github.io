@@ -1,5 +1,3 @@
-safe: :unsafe
-
 = A First Look at Dask on ARM on K8s
 :uri-asciidoctor: http://asciidoctor.org
 
