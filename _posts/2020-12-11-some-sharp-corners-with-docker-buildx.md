@@ -14,19 +14,17 @@ The other sharp edge is that you can accidentally build a native architecture Do
 
 Don't despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don't have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn't already have Docker on it, install Docker. Once you've set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:
 
-[source, bash]
-----
+```bash
 docker context create jetson-nano-ctx --docker host=ssh://root@192.168.3.125
-----
+```
 
 Once you have a remote context, you can use it in a "build instance." If you have QEMU locally, as I do, it's important that the remote context is set to be used, since otherwise, we will still try to build with emulation.
 
-[source, bash]
-----
+```bash
 docker buildx create --use --name mybuild-combined-builder jetson-nano-ctx 
 
 docker buildx create --append --name mybuild-combined-builder
-----
+```
 
 Another random sharp edge that I've run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., "failed to solve: rpc error: code = Unknown desc = failed commit on ref"). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching -- but that's just a hunch.
 
