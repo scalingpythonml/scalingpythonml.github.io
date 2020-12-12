@@ -3,15 +3,17 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>About | Scaling Python ML</title>
+<title>Some sharp corners with docker buildx (especially with qemu) | Scaling Python ML</title>
 <meta name="generator" content="Jekyll v3.9.0" />
-<meta property="og:title" content="About" />
+<meta property="og:title" content="Some sharp corners with docker buildx (especially with qemu)" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
-<meta property="og:description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
+<meta name="description" content="Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on." />
+<meta property="og:description" content="Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on." />
 <meta property="og:site_name" content="Scaling Python ML" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-12-11T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"WebPage","url":"/about.html","headline":"About","description":"Blog of my adventures working with different tools for scaling Python ML workloads.","@context":"https://schema.org"}</script>
+{"datePublished":"2020-12-11T00:00:00-08:00","@type":"BlogPosting","dateModified":"2020-12-11T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"/2020/12/11/some-sharp-corners-with-docker-buildx.html"},"url":"/2020/12/11/some-sharp-corners-with-docker-buildx.html","description":"Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.","headline":"Some sharp corners with docker buildx (especially with qemu)","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="/feed.xml" title="Scaling Python ML" />
@@ -56,17 +58,49 @@
 </header>
 <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <article class="post">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title">About</h1>
+    <h1 class="post-title p-name" itemprop="name headline">Some sharp corners with docker buildx (especially with qemu)</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-12-11T00:00:00-08:00" itemprop="datePublished">Dec 11, 2020
+      </time></p>
   </header>
 
-  <div class="post-content">
-    <p>This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark <a href="https://amzn.to/2O6KYYH">and have some books published on the topic</a> that may influence my views, but my views do not represent the project.</p>
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.</p>
 
-  </div>
+<h2 id="cross-building-sharp-edges">Cross building sharp edges</h2>
 
+<p>First, there are some issues when using cgo (and less often gcc) with QEMU which can sometimes cause segfaults. For me this showed up as “qemu: uncaught target signal 4 (Illegal instruction) - core dumped.” Future versions of cgo, gcc or QEMU may work around these issues, but if you find yourself getting errors while building what seems like a trivial example, there’s a good chance you’ve run into this. I’ve dealt with this problem by using an actual ARM machine for my cross-building.</p>
+
+<p>The other sharp edge is that you can accidentally build a native architecture Docker image labeled as the cross-architecture image, and only find out at runtime. This can happen when the FROM label in your Dockerfile specifies a specific hash. In this case, the easiest thing to do is specify a version tag instead. While it won’t fix the problem, using an actual target architecture machine for your building will let you catch this earlier on.</p>
+
+<h2 id="solution">Solution</h2>
+
+<p>Don’t despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don’t have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn’t already have Docker on it, install Docker. Once you’ve set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker context create jetson-nano-ctx <span class="nt">--docker</span> <span class="nv">host</span><span class="o">=</span>ssh://root@192.168.3.125
+</code></pre></div></div>
+
+<p>Once you have a remote context, you can use it in a “build instance.” If you have QEMU locally, as I do, it’s important that the remote context is set to be used, since otherwise, we will still try to build with emulation.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker buildx create <span class="nt">--use</span> <span class="nt">--name</span> mybuild-combined-builder jetson-nano-ctx 
+
+docker buildx create <span class="nt">--append</span> <span class="nt">--name</span> mybuild-combined-builder
+</code></pre></div></div>
+
+<p>Another random sharp edge that I’ve run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., “failed to solve: rpc error: code = Unknown desc = failed commit on ref”). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching – but that’s just a hunch.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Another option, especially for GO, is to do your build on your source arch targeting your target arch. There is a Docker blog post <a href="https://www.docker.com/blog/containerize-your-go-developer-environment-part-1/">on that approach here.</a> Cross-building C libraries is also an option, but more complicated.</p>
+
+<p>Now you’re ready to go off to the races and build with your remote machine. Don’t worry you can change your build instance back to your local context (use <code class="language-plaintext highlighter-rouge">docker buildx ls</code> to see your contexts). Happy porting, everyone!</p>
+
+<p>Have you run into additional sharp corners with QEMU &amp; buildx? Let me know and I’ll update this post :)</p>
+
+  </div><a class="u-url" href="/2020/12/11/some-sharp-corners-with-docker-buildx.html" hidden></a>
 </article>
 
       </div>

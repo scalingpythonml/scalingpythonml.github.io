@@ -1,4 +1,35 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-11-03T20:01:43-08:00</updated><id>/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00-08:00</published><updated>2020-11-03T00:00:00-08:00</updated><id>/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-12-11T19:20:33-08:00</updated><id>/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Some sharp corners with docker buildx (especially with qemu)</title><link href="/2020/12/11/some-sharp-corners-with-docker-buildx.html" rel="alternate" type="text/html" title="Some sharp corners with docker buildx (especially with qemu)" /><published>2020-12-11T00:00:00-08:00</published><updated>2020-12-11T00:00:00-08:00</updated><id>/2020/12/11/some-sharp-corners-with-docker-buildx</id><content type="html" xml:base="/2020/12/11/some-sharp-corners-with-docker-buildx.html">&lt;p&gt;Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.&lt;/p&gt;
+
+&lt;h2 id=&quot;cross-building-sharp-edges&quot;&gt;Cross building sharp edges&lt;/h2&gt;
+
+&lt;p&gt;First, there are some issues when using cgo (and less often gcc) with QEMU which can sometimes cause segfaults. For me this showed up as “qemu: uncaught target signal 4 (Illegal instruction) - core dumped.” Future versions of cgo, gcc or QEMU may work around these issues, but if you find yourself getting errors while building what seems like a trivial example, there’s a good chance you’ve run into this. I’ve dealt with this problem by using an actual ARM machine for my cross-building.&lt;/p&gt;
+
+&lt;p&gt;The other sharp edge is that you can accidentally build a native architecture Docker image labeled as the cross-architecture image, and only find out at runtime. This can happen when the FROM label in your Dockerfile specifies a specific hash. In this case, the easiest thing to do is specify a version tag instead. While it won’t fix the problem, using an actual target architecture machine for your building will let you catch this earlier on.&lt;/p&gt;
+
+&lt;h2 id=&quot;solution&quot;&gt;Solution&lt;/h2&gt;
+
+&lt;p&gt;Don’t despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don’t have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn’t already have Docker on it, install Docker. Once you’ve set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:&lt;/p&gt;
+
+&lt;h2 id=&quot;source-bash&quot;&gt;[source, bash]&lt;/h2&gt;
+&lt;p&gt;docker context create jetson-nano-ctx –docker host=ssh://root@192.168.3.125
+—-&lt;/p&gt;
+
+&lt;p&gt;Once you have a remote context, you can use it in a “build instance.” If you have QEMU locally, as I do, it’s important that the remote context is set to be used, since otherwise, we will still try to build with emulation.&lt;/p&gt;
+
+&lt;h2 id=&quot;source-bash-1&quot;&gt;[source, bash]&lt;/h2&gt;
+&lt;p&gt;docker buildx create –use –name mybuild-combined-builder jetson-nano-ctx&lt;/p&gt;
+
+&lt;h2 id=&quot;docker-buildx-create-append-name-mybuild-combined-builder&quot;&gt;docker buildx create –append –name mybuild-combined-builder&lt;/h2&gt;
+
+&lt;p&gt;Another random sharp edge that I’ve run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., “failed to solve: rpc error: code = Unknown desc = failed commit on ref”). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching – but that’s just a hunch.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Another option, especially for GO, is to do your build on your source arch targeting your target arch. There is a Docker blog post &lt;a href=&quot;https://www.docker.com/blog/containerize-your-go-developer-environment-part-1/&quot;&gt;on that approach here.&lt;/a&gt; Cross-building C libraries is also an option, but more complicated.&lt;/p&gt;
+
+&lt;p&gt;Now you’re ready to go off to the races and build with your remote machine. Don’t worry you can change your build instance back to your local context (use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;docker buildx ls&lt;/code&gt; to see your contexts). Happy porting, everyone!&lt;/p&gt;
+
+&lt;p&gt;Have you run into additional sharp corners with QEMU &amp;amp; buildx? Let me know and I’ll update this post :)&lt;/p&gt;</content><author><name></name></author><summary type="html">Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.</summary></entry><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00-08:00</published><updated>2020-11-03T00:00:00-08:00</updated><id>/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
 &lt;div class=&quot;sectionbody&quot;&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
 &lt;p&gt;After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are &lt;a href=&quot;https://github.com/dask/dask-kubernetes&quot;&gt;dask-kubernetes&lt;/a&gt; and &lt;a href=&quot;https://github.com/dask/dask-docker&quot;&gt;dask-docker&lt;/a&gt; projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).&lt;/p&gt;
@@ -18,16 +49,16 @@
 &lt;div class=&quot;content&quot;&gt;
 &lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; debian:buster-slim&lt;/span&gt;
 
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; LANG=C.UTF-8 LC_ALL=C.UTF-8&lt;/span&gt;
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH /opt/conda/bin:$PATH&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;LANG&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;C.UTF-8 &lt;span style=&quot;color: #19177C&quot;&gt;LC_ALL&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;C.UTF-8
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt; PATH /opt/conda/bin:&lt;span style=&quot;color: #19177C&quot;&gt;$PATH&lt;/span&gt;
 
 &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; apt-get update --fix-missing &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
     apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
     apt-get clean
 
-COPY setup.sh /setup.sh
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;COPY&lt;/span&gt; setup.sh /setup.sh
 &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; /setup.sh
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;CMD&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [ &amp;quot;/bin/bash&amp;quot; ]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;CMD&lt;/span&gt; [ &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;/bin/bash&amp;quot;&lt;/span&gt; ]&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -65,9 +96,9 @@ find /opt/conda/ -follow -type f -name &lt;span style=&quot;color: #BA2121&quot;
 &lt;div class=&quot;content&quot;&gt;
 &lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;  holdenk/miniforge:v0.3&lt;/span&gt;
 
-SHELL &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;/bin/bash&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;-c&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;SHELL&lt;/span&gt; [&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;/bin/bash&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;-c&amp;quot;&lt;/span&gt;]
 
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH /opt/conda/bin:$PATH&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt; PATH /opt/conda/bin:&lt;span style=&quot;color: #19177C&quot;&gt;$PATH&lt;/span&gt;
 
 &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; apt-get update --force-yes  -y --fix-missing &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
     apt-get install --force-yes  -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
@@ -101,11 +132,11 @@ SHELL &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt;&lt;span style=
 
 &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# pyzmq is installed explicitly so we don&amp;#39;t have to build it from src since jupyter-server-proxy needs it, but jupyter-server-proxy won&amp;#39;t install from conda directly&lt;/span&gt;
 
-COPY prepare.sh /usr/bin/prepare.sh
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;COPY&lt;/span&gt; prepare.sh /usr/bin/prepare.sh
 
 &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; mkdir /opt/app
 
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [&amp;quot;tini&amp;quot;, &amp;quot;-g&amp;quot;, &amp;quot;--&amp;quot;, &amp;quot;/usr/bin/prepare.sh&amp;quot;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt; [&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;tini&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;-g&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;--&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;/usr/bin/prepare.sh&amp;quot;&lt;/span&gt;]&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
@@ -150,33 +181,33 @@ kubectl create rolebinding dask&lt;span style=&quot;color: #666666&quot;&gt;-&lt
 &lt;div class=&quot;content&quot;&gt;
 &lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# worker-spec.yml&lt;/span&gt;
 
-kind: Pod
-metadata:
-  namespace: dask
-  labels:
-    foo: bar5
-spec:
-  restartPolicy: Never
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;kind&lt;/span&gt;: Pod
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;metadata&lt;/span&gt;:
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;namespace&lt;/span&gt;: dask
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;labels&lt;/span&gt;:
+    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;foo&lt;/span&gt;: bar5
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;spec&lt;/span&gt;:
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;restartPolicy&lt;/span&gt;: Never
 &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Added by holden&lt;/span&gt;
-  serviceAccountName: dask
-  automountServiceAccountToken: true
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;serviceAccountName&lt;/span&gt;: dask
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;automountServiceAccountToken&lt;/span&gt;: true
 &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# End added by Holden&lt;/span&gt;
-  containers:
+  &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;containers&lt;/span&gt;:
 &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Configure for dual arch&lt;/span&gt;
-  - image: holdenk/dask-base:v0.9.1
-    imagePullPolicy: IfNotPresent
-    args: [&lt;span style=&quot;color: #19177C&quot;&gt;dask-worker&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--nthreads&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;2&amp;#39;&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--no-dashboard&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--memory-limit&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;6GB&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--death-timeout&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;60&amp;#39;&lt;/span&gt;]
-    name: dask
+  - &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;image&lt;/span&gt;: holdenk/dask-base:v0.9.1
+    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;imagePullPolicy&lt;/span&gt;: IfNotPresent
+    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;args&lt;/span&gt;: [&lt;span style=&quot;color: #19177C&quot;&gt;dask-worker&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--nthreads&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;2&amp;#39;&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--no-dashboard&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--memory-limit&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;6GB&lt;/span&gt;, &lt;span style=&quot;color: #19177C&quot;&gt;--death-timeout&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;60&amp;#39;&lt;/span&gt;]
+    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;name&lt;/span&gt;: dask
     &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#env:&lt;/span&gt;
     &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#  - name: EXTRA_PIP_PACKAGES&lt;/span&gt;
     &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#    value: git+https://github.com/dask/distributed&lt;/span&gt;
-    resources:
-      limits:
-        cpu: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
-        memory: 8G
-      requests:
-        cpu: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
-        memory: 8G&lt;/code&gt;&lt;/pre&gt;
+    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;resources&lt;/span&gt;:
+      &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;limits&lt;/span&gt;:
+        &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;cpu&lt;/span&gt;: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
+        &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;memory&lt;/span&gt;: 8G
+      &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;requests&lt;/span&gt;:
+        &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;cpu&lt;/span&gt;: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2&amp;quot;&lt;/span&gt;
+        &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;memory&lt;/span&gt;: 8G&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
