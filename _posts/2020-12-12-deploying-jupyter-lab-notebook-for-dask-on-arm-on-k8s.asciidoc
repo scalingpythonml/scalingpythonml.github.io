@@ -3,7 +3,7 @@
 In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
 
 
-## Rebuilding the Containers
+## Rebuilding the JupyterHub Containers
 
     The default Jupyter containers are not yet cross-built for ARM. If your primary development machine is not an ARM machine, you'll want to set up Docker buildx for cross-building, and I've got some instructions on how to do this.
 
@@ -66,7 +66,13 @@ Next, is that Miniconda doesn't have full ARM64 support, so you'll want to swap 
 +    rm miniforge.sh && \
 ----
 
-After that you can build with a custom image prefix as in <<ex_chartpress_build>>.
+The docker-stacks notebooks are built with a Makefile so to build the base image, you'll execute `OWNER=holdenk make build/base-notebook`, where you set "OWNER" to your dockerhub username.
+
+
+In addition to the docker-stack images you'll want to rebuild the zero-to-jupyterhub-k8s and jconfigurable-http-proxy.
+
+
+With zero-to-jupyter-hub-k8s you'll also need to change `images/singleuser-sample/Dockerfile` to use the docker-stack image you built (e.g. in mine I replaced `FROM jupyter/base-notebook:45bfe5a474fa` with `FROM  holdenk/base-notebook:latest`) . The py-spy package will also need to be removed from the images/hub/requirements.txt file since it is not cross-built (and it is optional anyway). zero-to-jupyterhub-k8s is built with `chartpress`, so you will just build with a custom image prefix as in <<ex_chartpress_build>>.
 
 [[ex_chartpress_build]]
 ====
@@ -75,11 +81,6 @@ After that you can build with a custom image prefix as in <<ex_chartpress_build>
 chartpress  --image-prefix holdenk/jupyter-hub-magic --force-build
 ----
 ====
-
-In addition to the docker-stack images you'll want to rebuild the zero-to-jupyterhub-k8s and jconfigurable-http-proxy.
-
-With zero-to-jupyter-hub-k8s you'll also need to change images/singleuser-sample/Dockerfile and use the prefix docker-stack image you built. The py-spy package will also need to be removed from the images/hub/requirements.txt file since it is not cross-built (and it is optional anyway). zero-to-jupyterhub-k8s is also built with `chartpress`, so you will just re-run the same build as in <<ex_chartpress_build>>.
-
 
 
 With jconfigurable-http-proxy no changes are necessary to the project it's self, and you can directly run `docker buildx build -t holdenk/jconfigurable-http-proxy:0.0.1 .  --platform linux/arm64,linux/amd64 --push`. Note this is a different build command as the proxy project does not use chartpress.
@@ -125,7 +126,7 @@ Jupyter expects an SSL certificate for its endpoint. If you don't have cert mana
 ====
 [source, yaml]
 ----
-include::../subrepos/certificate-stuff/le-prod-cert.yaml[]
+include::../subrepos/scalingpythonml/certificate-stuff/le-prod-cert.yaml[]
 ----
 ====
 
