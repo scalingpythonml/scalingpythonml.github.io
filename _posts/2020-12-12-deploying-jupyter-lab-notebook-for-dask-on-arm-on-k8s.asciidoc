@@ -1,16 +1,16 @@
-# Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes
+= Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes
 
 In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
 
 
-## Rebuilding the JupyterHub Containers
+== Rebuilding the JupyterHub Containers
 
-    The default Jupyter containers are not yet cross-built for ARM. If your primary development machine is not an ARM machine, you'll want to set up Docker buildx for cross-building, and I've got some instructions on how to do this.
+The default Jupyter containers are not yet cross-built for ARM. If your primary development machine is not an ARM machine, you'll want to set up Docker buildx for cross-building, and I've got some instructions on how to do this.
 
 [WARNING]
 
 ====
-One of Jupyter's containers uses cgo to build a small bootstrap program: this program will not build under QEMU. If you get an error building your containers check out my instructions on cross-building with real hosts. You can also cross-build without QEMU (discussed in the same post).
+One of Jupyter's containers uses cgo to build a small bootstrap program: this program will not build under QEMU. If you get an error building your containers check out link:$$/2020/12/11/some-sharp-corners-with-docker-buildx.html$$[my instructions on cross-building with real hosts.] You can also cross-build without QEMU (discussed in the same post).
 ====
 
 JupyterLab uses a special program called link:$$https://pypi.org/project/chartpress/$$[ChartPress] to build it's images. This program's compose building capabilities are similar to Docker's but are Python focused. To make ChartPress use Docker buildx, you'll want to clone the repo `git clone git@github.com:jupyterhub/chartpress.git` and replace the following line in chartpress.py
@@ -86,7 +86,7 @@ chartpress  --image-prefix holdenk/jupyter-hub-magic --force-build
 With jconfigurable-http-proxy no changes are necessary to the project it's self, and you can directly run `docker buildx build -t holdenk/jconfigurable-http-proxy:0.0.1 .  --platform linux/arm64,linux/amd64 --push`. Note this is a different build command as the proxy project does not use chartpress.
 
 
-### Configuring the container images
+=== Configuring the container images
 
 Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a [chart repository](https://v2.helm.sh/docs/chart_repository/) or you can use the existing published helm chart and override the images.
 
@@ -118,7 +118,7 @@ We'll keep building on the above configuration, since we need to do more than ju
 
 
 
-## Setting up a SSL Certificate
+== Setting up a SSL Certificate
 
 Jupyter expects an SSL certificate for its endpoint. If you don't have cert manager installed, the guide at link:$$https://opensource.com/article/20/3/ssl-letsencrypt-k3s$$[https://opensource.com/article/20/3/ssl-letsencrypt-k3s shows how to configure SSL using Let's Encrypt]. If you don't have a publicly accessible IP and domain, you'll need to use an alternative provider. Once you have cert-manager installed it's time to request the certificate. The YAML for my certificate request for`holdenkarau.mooo.com` is shown in <<cert-req>>.
 
@@ -143,7 +143,7 @@ include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=ssl_cert
 ----
 ====
 
-## Configure Traefik & Your Service
+== Making Jupyter work without a second public IP
 
 Since my home only has one public IP address, I changed the service type from LodeBalancer to NodePort, since I did not have a spare public IP to assign to Jupyter.
 
@@ -153,7 +153,9 @@ Since my home only has one public IP address, I changed the service type from Lo
 include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=proxy_service]
 ----
 
-## Setting up Authentication
+With this change the service deployed successfully and Traefik (installed in K3s by default) was able to route the requests.
+
+== Setting up Authentication
 
 I was unable to get the JupyterHub GitHub plugin working, but it looks like there is an link::$$https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871$$[outstanding issue to refactor the auth configuration], so for now I just hard coded what is known as "dummy" authentication. I recommend using a different kind of authentication as soon as the refactoring is complete.
 
@@ -162,7 +164,7 @@ I was unable to get the JupyterHub GitHub plugin working, but it looks like ther
 include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=auth]
 ----
 
-## Installing JupyterHub with Helm
+== Installing JupyterHub with Helm
 
 Now you can install this with Helm:
 
@@ -175,7 +177,7 @@ include::../subrepos/zero-to-jupyterhub-k8s/helm-install.sh[]
 And now you're ready to rock and roll with JupyterHub! However, part of the config is still commented out; that's because we have not yet built the single user Dask Jupyter Docker container. If you aren't using Dask, this can be your stopping point.
 
 
-## Adding Dask Support
+== Adding Dask Support
 
 Adding Dask Support involves configuring permissions to make sure the notebook can create executors, building an image to work with your JupyterHub launcher, and adding the image to as a profile to your launcher.
 
@@ -201,7 +203,7 @@ include::../subrepos/scalingpythonml/dask-examples/setup.sh[tags=setup_namespace
 ----
 ====
 
-### Building container images
+=== Building container images
 
 The link::$$https://github.com/dask/dask-docker$$[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub's launcher. The first change needed is commenting out the auto start in `notebook/prepare.sh`. The other required change is swapping the Dockerfile with your cross-built  -- single-user-sample. I updated mine to also install some helpful libraries as in <<my_dask_nb_dockerfile>>:
 
@@ -215,7 +217,7 @@ include::../subrepos/dask-docker/notebook/Dockerfile
 
 As before you can build this with the standard `docker buildx` commands.
 
-### Configuring your Jupyter
+=== Configuring your Jupyter
 
 To enable Dask with Jupyter you'll need to update your configuration to both specify the service account and add a profile for for the notebook container you've created. In my situation this looks like:
 

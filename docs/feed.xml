@@ -1,39 +1,481 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2020-12-12T10:57:30-08:00</updated><id>/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Some sharp corners with docker buildx (especially with qemu)</title><link href="/2020/12/11/some-sharp-corners-with-docker-buildx.html" rel="alternate" type="text/html" title="Some sharp corners with docker buildx (especially with qemu)" /><published>2020-12-11T00:00:00-08:00</published><updated>2020-12-11T00:00:00-08:00</updated><id>/2020/12/11/some-sharp-corners-with-docker-buildx</id><content type="html" xml:base="/2020/12/11/some-sharp-corners-with-docker-buildx.html">Have you been trying out Docker's wonderful new buildx with QEMU, but are getting an unexpected &quot;exec user process caused: exec format error&quot; or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="/https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="/https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2020-12-12T18:22:29-08:00</updated><id>/https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes</title><link href="/https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes" /><published>2020-12-12T00:00:00-08:00</published><updated>2020-12-12T00:00:00-08:00</updated><id>/https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s</id><content type="html" xml:base="/https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We&amp;#8217;ll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_rebuilding-the-jupyterhub-containers&quot;&gt;Rebuilding the JupyterHub Containers&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The default Jupyter containers are not yet cross-built for ARM. If your primary development machine is not an ARM machine, you&amp;#8217;ll want to set up Docker buildx for cross-building, and I&amp;#8217;ve got some instructions on how to do this.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;admonitionblock warning&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td class=&quot;icon&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Warning&lt;/div&gt;
+&lt;/td&gt;
+&lt;td class=&quot;content&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;One of Jupyter&amp;#8217;s containers uses cgo to build a small bootstrap program: this program will not build under QEMU. If you get an error building your containers check out &lt;a href=&quot;/2020/12/11/some-sharp-corners-with-docker-buildx.html&quot;&gt;my instructions on cross-building with real hosts.&lt;/a&gt; You can also cross-build without QEMU (discussed in the same post).&lt;/p&gt;
+&lt;/div&gt;
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;JupyterLab uses a special program called &lt;a href=&quot;https://pypi.org/project/chartpress/&quot;&gt;ChartPress&lt;/a&gt; to build it&amp;#8217;s images. This program&amp;#8217;s compose building capabilities are similar to Docker&amp;#8217;s but are Python focused. To make ChartPress use Docker buildx, you&amp;#8217;ll want to clone the repo &lt;code&gt;git clone &lt;a href=&quot;mailto:git@github.com&quot;&gt;git@github.com&lt;/a&gt;:jupyterhub/chartpress.git&lt;/code&gt; and replace the following line in chartpress.py&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;diff&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #A00000&quot;&gt;-    cmd = [&amp;#39;docker&amp;#39;, &amp;#39;build&amp;#39;, &amp;#39;-t&amp;#39;, image_spec, context_path]&lt;/span&gt;
 
+&lt;span style=&quot;color: #00A000&quot;&gt;+    cmd = [&amp;#39;docker&amp;#39;, &amp;#39;buildx&amp;#39;, &amp;#39;build&amp;#39;, &amp;#39;-t&amp;#39;, image_spec, context_path, &amp;quot;--platform&amp;quot;, &amp;quot;linux/arm64,linux/amd64&amp;quot;, &amp;quot;--push&amp;quot;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Then you can pip install your local version:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;pip install -e .&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you have ChartPress set up to cross-build for ARM64 and AMD64, you can check out &lt;a href=&quot;https://github.com/jupyter/docker-stacks&quot;&gt;docker-stacks repo&lt;/a&gt; and make a few changes. First is the base notebook container targets a specific non-cross platform hash, so we&amp;#8217;ll change the &quot;FROM&quot;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;diff&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #A00000&quot;&gt;-ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4&lt;/span&gt;
 
-## Cross building sharp edges
+&lt;span style=&quot;color: #00A000&quot;&gt;+#ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4&lt;/span&gt;
 
-First, there are some issues when using cgo (and less often gcc) with QEMU which can sometimes cause segfaults. For me this showed up as &quot;qemu: uncaught target signal 4 (Illegal instruction) - core dumped.&quot; Future versions of cgo, gcc or QEMU may work around these issues, but if you find yourself getting errors while building what seems like a trivial example, there's a good chance you've run into this. I've dealt with this problem by using an actual ARM machine for my cross-building.
+&lt;span style=&quot;color: #00A000&quot;&gt;+ARG ROOT_CONTAINER=ubuntu:focal&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Next, is that Miniconda doesn&amp;#8217;t have full ARM64 support, so you&amp;#8217;ll want to swap the Miniconda install to Miniforge:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;diff&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #A00000&quot;&gt;-RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh &amp;amp;&amp;amp; \&lt;/span&gt;
 
-The other sharp edge is that you can accidentally build a native architecture Docker image labeled as the cross-architecture image, and only find out at runtime. This can happen when the FROM label in your Dockerfile specifies a specific hash. In this case, the easiest thing to do is specify a version tag instead. While it won't fix the problem, using an actual target architecture machine for your building will let you catch this earlier on.
+&lt;span style=&quot;color: #A00000&quot;&gt;-    echo &amp;quot;${miniconda_checksum} *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh&amp;quot; | md5sum -c - &amp;amp;&amp;amp; \&lt;/span&gt;
 
+&lt;span style=&quot;color: #A00000&quot;&gt;-    /bin/bash Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR &amp;amp;&amp;amp; \&lt;/span&gt;
 
-## Solution
+&lt;span style=&quot;color: #A00000&quot;&gt;-    rm Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh &amp;amp;&amp;amp; \&lt;/span&gt;
 
-Don't despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don't have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn't already have Docker on it, install Docker. Once you've set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:
+&lt;span style=&quot;color: #00A000&quot;&gt;+RUN export arch=$(uname -m) &amp;amp;&amp;amp; \&lt;/span&gt;
 
-```bash
-docker context create jetson-nano-ctx --docker host=ssh://root@192.168.3.125
-```
+&lt;span style=&quot;color: #00A000&quot;&gt;+    if [ &amp;quot;$arch&amp;quot; == &amp;quot;aarm64&amp;quot; ]; then \&lt;/span&gt;
 
-Once you have a remote context, you can use it in a &quot;build instance.&quot; If you have QEMU locally, as I do, it's important that the remote context is set to be used, since otherwise, we will still try to build with emulation.
+&lt;span style=&quot;color: #00A000&quot;&gt;+      arch=&amp;quot;arm64&amp;quot;; \&lt;/span&gt;
 
-```bash
-docker buildx create --use --name mybuild-combined-builder jetson-nano-ctx 
+&lt;span style=&quot;color: #00A000&quot;&gt;+    fi; \&lt;/span&gt;
 
-docker buildx create --append --name mybuild-combined-builder
-```
+&lt;span style=&quot;color: #00A000&quot;&gt;+    wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-${arch}.sh -O miniforge.sh &amp;amp;&amp;amp; \&lt;/span&gt;
 
-Another random sharp edge that I've run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., &quot;failed to solve: rpc error: code = Unknown desc = failed commit on ref&quot;). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching -- but that's just a hunch.
+&lt;span style=&quot;color: #00A000&quot;&gt;+    chmod a+x miniforge.sh &amp;amp;&amp;amp; \&lt;/span&gt;
 
+&lt;span style=&quot;color: #00A000&quot;&gt;+    ./miniforge.sh -f -b -p $CONDA_DIR &amp;amp;&amp;amp; \&lt;/span&gt;
 
-## Conclusion
+&lt;span style=&quot;color: #00A000&quot;&gt;+    rm miniforge.sh &amp;amp;&amp;amp; \&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The docker-stacks notebooks are built with a Makefile so to build the base image, you&amp;#8217;ll execute &lt;code&gt;OWNER=holdenk make build/base-notebook&lt;/code&gt;, where you set &quot;OWNER&quot; to your dockerhub username.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In addition to the docker-stack images you&amp;#8217;ll want to rebuild the zero-to-jupyterhub-k8s and jconfigurable-http-proxy.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;With zero-to-jupyter-hub-k8s you&amp;#8217;ll also need to change &lt;code&gt;images/singleuser-sample/Dockerfile&lt;/code&gt; to use the docker-stack image you built (e.g. in mine I replaced &lt;code&gt;FROM jupyter/base-notebook:45bfe5a474fa&lt;/code&gt; with &lt;code&gt;FROM  holdenk/base-notebook:latest&lt;/code&gt;) . The py-spy package will also need to be removed from the images/hub/requirements.txt file since it is not cross-built (and it is optional anyway). zero-to-jupyterhub-k8s is built with &lt;code&gt;chartpress&lt;/code&gt;, so you will just build with a custom image prefix as in &lt;a href=&quot;#ex_chartpress_build&quot;&gt;[ex_chartpress_build]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;ex_chartpress_build&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;chartpress  --image-prefix holdenk/jupyter-hub-magic --force-build&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;With jconfigurable-http-proxy no changes are necessary to the project it&amp;#8217;s self, and you can directly run &lt;code&gt;docker buildx build -t holdenk/jconfigurable-http-proxy:0.0.1 .  --platform linux/arm64,linux/amd64 --push&lt;/code&gt;. Note this is a different build command as the proxy project does not use chartpress.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_configuring-the-container-images&quot;&gt;Configuring the container images&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you&amp;#8217;ve built the container images, we need to configure our helm chart to use them. When you run &lt;code&gt;chartpress&lt;/code&gt; inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a [chart repository](&lt;a href=&quot;https://v2.helm.sh/docs/chart_repository/&quot; class=&quot;bare&quot;&gt;https://v2.helm.sh/docs/chart_repository/&lt;/a&gt;) or you can use the existing published helm chart and override the images.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To install with the existing published chart you can run &lt;a href=&quot;#install_existing&quot;&gt;[install_existing]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;install_existing&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
+helm repo update&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To override the images, you&amp;#8217;ll need to specify the images in your configuration to helm when your doing your install later as in &lt;a href=&quot;#img-config&quot;&gt;[img-config]&lt;/a&gt;. I put this in a file called &lt;code&gt;config.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;img-config&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+proxy:
+  secretSync:
+    image:
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# This one needs to be override either way.&lt;/span&gt;
+  chp:
+    image:
+      name: holdenk/jconfigurable-http-proxy
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.0.1&amp;#39;&lt;/span&gt;
+singleuser:
+  networkTools:
+    image:
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  image:
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We&amp;#8217;ll keep building on the above configuration, since we need to do more than just override the images.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_setting-up-a-ssl-certificate&quot;&gt;Setting up a SSL Certificate&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Jupyter expects an SSL certificate for its endpoint. If you don&amp;#8217;t have cert manager installed, the guide at &lt;a href=&quot;https://opensource.com/article/20/3/ssl-letsencrypt-k3s&quot;&gt;&lt;a href=&quot;https://opensource.com/article/20/3/ssl-letsencrypt-k3s&quot; class=&quot;bare&quot;&gt;https://opensource.com/article/20/3/ssl-letsencrypt-k3s&lt;/a&gt; shows how to configure SSL using Let&amp;#8217;s Encrypt&lt;/a&gt;. If you don&amp;#8217;t have a publicly accessible IP and domain, you&amp;#8217;ll need to use an alternative provider. Once you have cert-manager installed it&amp;#8217;s time to request the certificate. The YAML for my certificate request for`holdenkarau.mooo.com` is shown in &lt;a href=&quot;#cert-req&quot;&gt;[cert-req]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;cert-req&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: k3s-mooo
+  namespace: jhub
+spec:
+  secretName: k3s-mooo-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: holdenkarau.mooo.com
+  dnsNames:
+  - holdenkarau.mooo.com&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Once you make your certificate request you can apply with &lt;code&gt;kubectl apply -f le-prod-cert.yaml&lt;/code&gt;, and monitor it with &lt;code&gt;kubectl get certificates -n jhub -w -o yaml&lt;/code&gt;. If your certificate does not become &quot;Ready&quot;, you should check out the &lt;a href=&quot;https://cert-manager.io/docs/faq/acme/&quot;&gt;cert-manager debugging guide&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you&amp;#8217;ve got your SSl certificate stored as a secret in your cluster, you&amp;#8217;ll need configure your JupyterHub ingress to use it by adding &lt;a href=&quot;#ingres-config&quot;&gt;[ingres-config]&lt;/a&gt; to your &lt;code&gt;config.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;ingress-config&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;ingress:
+  enabled: true
+  hosts:
+    - holdenkarau.mooo.com
+  tls:
+   - hosts:
+      - holdenkarau.mooo.com
+     secretName: k3s-mooo-tls&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_making-jupyter-work-without-a-second-public-ip&quot;&gt;Making Jupyter work without a second public IP&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Since my home only has one public IP address, I changed the service type from LodeBalancer to NodePort, since I did not have a spare public IP to assign to Jupyter.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;proxy:
+  service:
+    type: NodePort
+  secretToken: DIFFERENTSECRET&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;With this change the service deployed successfully and Traefik (installed in K3s by default) was able to route the requests.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_setting-up-authentication&quot;&gt;Setting up Authentication&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;I was unable to get the JupyterHub GitHub plugin working, but it looks like there is an link::https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871[outstanding issue to refactor the auth configuration], so for now I just hard coded what is known as &quot;dummy&quot; authentication. I recommend using a different kind of authentication as soon as the refactoring is complete.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;auth:
+  type: dummy
+  dummy:
+    password: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;mypassword&amp;#39;&lt;/span&gt;
+  whitelist:
+    users:
+      - user1
+      - user2&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_installing-jupyterhub-with-helm&quot;&gt;Installing JupyterHub with Helm&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now you can install this with Helm:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;RELEASE&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;jhub
 
-Another option, especially for GO, is to do your build on your source arch targeting your target arch. There is a Docker blog post [on that approach here.](https://www.docker.com/blog/containerize-your-go-developer-environment-part-1/) Cross-building C libraries is also an option, but more complicated.
+&lt;span style=&quot;color: #19177C&quot;&gt;NAMESPACE&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;jhub
 
-Now you're ready to go off to the races and build with your remote machine. Don't worry you can change your build instance back to your local context (use `docker buildx ls` to see your contexts). Happy porting, everyone!
+helm install    &lt;span style=&quot;color: #19177C&quot;&gt;$RELEASE&lt;/span&gt; jupyterhub/jupyterhub   --namespace &lt;span style=&quot;color: #19177C&quot;&gt;$NAMESPACE&lt;/span&gt;   --create-namespace   --version&lt;span style=&quot;color: #666666&quot;&gt;=0&lt;/span&gt;.10.2     --values config.yaml&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;And now you&amp;#8217;re ready to rock and roll with JupyterHub! However, part of the config is still commented out; that&amp;#8217;s because we have not yet built the single user Dask Jupyter Docker container. If you aren&amp;#8217;t using Dask, this can be your stopping point.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_adding-dask-support&quot;&gt;Adding Dask Support&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Adding Dask Support involves configuring permissions to make sure the notebook can create executors, building an image to work with your JupyterHub launcher, and adding the image to as a profile to your launcher.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_permissions&quot;&gt;Permissions&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The default service account used will probably not have the right permissions to launch dask-distributed workers.
+To start with create a specification for the what permission your notebook is going to need, I called my &lt;code&gt;setup.yaml&lt;/code&gt; (not very creative I know) as in &lt;a href=&quot;#ex-perm-yaml&quot;&gt;[ex-perm-yaml]&lt;/a&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;ex-perm-yaml&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: daskKubernetes
+  namespace: dask
+rules:
+- apiGroups:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt;  &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# indicates the core API group&lt;/span&gt;
+  resources:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;pods&amp;quot;&lt;/span&gt;
+  verbs:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;get&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;list&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;watch&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;create&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;delete&amp;quot;&lt;/span&gt;
+- apiGroups:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt;  &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# indicates the core API group&lt;/span&gt;
+  resources:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;pods/log&amp;quot;&lt;/span&gt;
+  verbs:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;get&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;list&amp;quot;&lt;/span&gt;
+- apiGroups:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# indicates the core API group&lt;/span&gt;
+  resources:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;services&amp;quot;&lt;/span&gt;
+  verbs:
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;get&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;list&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;watch&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;create&amp;quot;&lt;/span&gt;
+  - &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;delete&amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you&amp;#8217;ve specified the permissions you can go ahead and create the accounts, namespaces, and bindings to wire everything together as in &lt;a href=&quot;#ex-setup-namespace&quot;&gt;[ex-setup-namespace]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;ex-setup-namespace&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;kubectl create namespace dask
+kubectl create serviceaccount dask --namespace dask
+kubectl apply -f setup.yaml
+kubectl create rolebinding dask-sa-binding --namespace dask --role&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;daskKubernetes --user&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;dask:dask&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_building-container-images&quot;&gt;Building container images&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The link::https://github.com/dask/dask-docker[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub&amp;#8217;s launcher. The first change needed is commenting out the auto start in &lt;code&gt;notebook/prepare.sh&lt;/code&gt;. The other required change is swapping the Dockerfile with your cross-built &amp;#8201;&amp;#8212;&amp;#8201;single-user-sample. I updated mine to also install some helpful libraries as in &lt;a href=&quot;#my_dask_nb_dockerfile&quot;&gt;[my_dask_nb_dockerfile]&lt;/a&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;my_dask_nb_dockerfile&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;include::../subrepos/dask-docker/notebook/Dockerfile&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;As before you can build this with the standard &lt;code&gt;docker buildx&lt;/code&gt; commands.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_configuring-your-jupyter&quot;&gt;Configuring your Jupyter&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To enable Dask with Jupyter you&amp;#8217;ll need to update your configuration to both specify the service account and add a profile for for the notebook container you&amp;#8217;ve created. In my situation this looks like:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Once your done with your config changes,  you need to update your install with &lt;code&gt;helm upgrade --cleanup-on-fail   --install $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2   --values config.yaml&lt;/code&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;All in all my confiugration file looks something like &lt;a href=&quot;#my-total-config&quot;&gt;[my-total-config]&lt;/a&gt; (except with diffferent secrets). Your config file will look a bit different depending on the choices you made while running through this config.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;my-total-config&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+proxy:
+  service:
+    type: NodePort
+  secretToken: DIFFERENTSECRET
+  secretSync:
+    image:
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  chp:
+    image:
+      name: holdenk/jconfigurable-http-proxy
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.0.1&amp;#39;&lt;/span&gt;
+ingress:
+  enabled: true
+  hosts:
+    - holdenkarau.mooo.com
+  tls:
+   - hosts:
+      - holdenkarau.mooo.com
+     secretName: k3s-mooo-tls
+singleuser:
+  serviceAccountName: dask
+  networkTools:
+    image:
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  image:
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  profileList:
+    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Minimal&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;environment&amp;quot;&lt;/span&gt;
+      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;To&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;avoid&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;too&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;much&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;bells&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;and&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;whistles:&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Python.&amp;quot;&lt;/span&gt;
+      default: true
+    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Dask&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;container&amp;quot;&lt;/span&gt;
+      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;dask&amp;quot;&lt;/span&gt;
+      kubespawner_override:
+        image: holdenk/dask-notebook:v0.9.4b
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Do something better here! It&amp;#39;s being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871&lt;/span&gt;
+auth:
+  type: dummy
+  dummy:
+    password: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;mypassword&amp;#39;&lt;/span&gt;
+  whitelist:
+    users:
+      - user1
+      - user2&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now you&amp;#8217;re ready to rock-and-role with more stable Dask jobs, that can survive when your notebook goes to sleep or your home internet connection goes out between you and your cluster. The next blog post will explore how this is a bit more involved for building a JupyterHub launcher container for a Spark notebook.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We&amp;#8217;ll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.</summary></entry><entry><title type="html">Some sharp corners with docker buildx (especially with qemu)</title><link href="/https://scalingpythonml.com/2020/12/11/some-sharp-corners-with-docker-buildx.html" rel="alternate" type="text/html" title="Some sharp corners with docker buildx (especially with qemu)" /><published>2020-12-11T00:00:00-08:00</published><updated>2020-12-11T00:00:00-08:00</updated><id>/https://scalingpythonml.com/2020/12/11/some-sharp-corners-with-docker-buildx</id><content type="html" xml:base="/https://scalingpythonml.com/2020/12/11/some-sharp-corners-with-docker-buildx.html">&lt;p&gt;Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.&lt;/p&gt;
 
-Have you run into additional sharp corners with QEMU &amp; buildx? Let me know and I'll update this post :)</content><author><name></name></author><summary type="html">Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.</summary></entry><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00-08:00</published><updated>2020-11-03T00:00:00-08:00</updated><id>/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
+&lt;h2 id=&quot;cross-building-sharp-edges&quot;&gt;Cross building sharp edges&lt;/h2&gt;
+
+&lt;p&gt;First, there are some issues when using cgo (and less often gcc) with QEMU which can sometimes cause segfaults. For me this showed up as “qemu: uncaught target signal 4 (Illegal instruction) - core dumped.” Future versions of cgo, gcc or QEMU may work around these issues, but if you find yourself getting errors while building what seems like a trivial example, there’s a good chance you’ve run into this. I’ve dealt with this problem by using an actual ARM machine for my cross-building.&lt;/p&gt;
+
+&lt;p&gt;The other sharp edge is that you can accidentally build a native architecture Docker image labeled as the cross-architecture image, and only find out at runtime. This can happen when the FROM label in your Dockerfile specifies a specific hash. In this case, the easiest thing to do is specify a version tag instead. While it won’t fix the problem, using an actual target architecture machine for your building will let you catch this earlier on.&lt;/p&gt;
+
+&lt;h2 id=&quot;solution&quot;&gt;Solution&lt;/h2&gt;
+
+&lt;p&gt;Don’t despair, though, instead of QEMU, we can use remote contexts. First, get a machine based on your target architecture. If you don’t have one handy, some cloud providers offer a variety of architectures. Then, if your machine doesn’t already have Docker on it, install Docker. Once you’ve set up docker on the remote machine, you can create a docker context for it. In my case, I have ssh access (with keys) as the root user to a jetson nano at 192.168.3.125, so I create my context as:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker context create jetson-nano-ctx &lt;span class=&quot;nt&quot;&gt;--docker&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;ssh://root@192.168.3.125
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Once you have a remote context, you can use it in a “build instance.” If you have QEMU locally, as I do, it’s important that the remote context is set to be used, since otherwise, we will still try to build with emulation.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker buildx create &lt;span class=&quot;nt&quot;&gt;--use&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--name&lt;/span&gt; mybuild-combined-builder jetson-nano-ctx 
+
+docker buildx create &lt;span class=&quot;nt&quot;&gt;--append&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--name&lt;/span&gt; mybuild-combined-builder
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Another random sharp edge that I’ve run into with Docker buildx is a lot of transient issues seem to go away when I rerun the same command (e.g., “failed to solve: rpc error: code = Unknown desc = failed commit on ref”). I imagine this might be due to a race condition because when I rerun it, Docker buildx uses caching – but that’s just a hunch.&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Another option, especially for GO, is to do your build on your source arch targeting your target arch. There is a Docker blog post &lt;a href=&quot;https://www.docker.com/blog/containerize-your-go-developer-environment-part-1/&quot;&gt;on that approach here.&lt;/a&gt; Cross-building C libraries is also an option, but more complicated.&lt;/p&gt;
+
+&lt;p&gt;Now you’re ready to go off to the races and build with your remote machine. Don’t worry you can change your build instance back to your local context (use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;docker buildx ls&lt;/code&gt; to see your contexts). Happy porting, everyone!&lt;/p&gt;
+
+&lt;p&gt;Have you run into additional sharp corners with QEMU &amp;amp; buildx? Let me know and I’ll update this post :)&lt;/p&gt;</content><author><name></name></author><summary type="html">Have you been trying out Docker’s wonderful new buildx with QEMU, but are getting an unexpected “exec user process caused: exec format error” or strange segfaults on ARM? If so, this short and sweet blog post is for you. I want to be clear: I think buildx with qemu is amazing, but there are some sharp edges to keep your eyes out on.</summary></entry><entry><title type="html">A First Look at Dask on ARM on K8s</title><link href="/https://scalingpythonml.com/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="A First Look at Dask on ARM on K8s" /><published>2020-11-03T00:00:00-08:00</published><updated>2020-11-03T00:00:00-08:00</updated><id>/https://scalingpythonml.com/2020/11/03/a-first-look-at-dask-on-arm-on-k8s</id><content type="html" xml:base="/https://scalingpythonml.com/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
 &lt;div class=&quot;sectionbody&quot;&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
 &lt;p&gt;After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are &lt;a href=&quot;https://github.com/dask/dask-kubernetes&quot;&gt;dask-kubernetes&lt;/a&gt; and &lt;a href=&quot;https://github.com/dask/dask-docker&quot;&gt;dask-docker&lt;/a&gt; projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).&lt;/p&gt;
@@ -303,165 +745,158 @@ mamba install &lt;span style=&quot;color: #666666&quot;&gt;--&lt;/span&gt;yes py
 &lt;div class=&quot;footnote&quot; id=&quot;_footnotedef_2&quot;&gt;
 &lt;a href=&quot;#_footnoteref_2&quot;&gt;2&lt;/a&gt;. You can use the actor API within the other APIs, but it is not part of the same building blocks.
 &lt;/div&gt;
-&lt;/div&gt;</content><author><name></name></author><summary type="html">After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</summary></entry><entry><title type="html">Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM</title><link href="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html" rel="alternate" type="text/html" title="Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM" /><published>2020-10-18T00:00:00-07:00</published><updated>2020-10-18T00:00:00-07:00</updated><id>/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm</id><content type="html" xml:base="/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html">After the [last adventure](http://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html) of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other &quot;simple&quot; projects and some things I had assumed would be &quot;super quick&quot; ended up taking much longer than planned.
+&lt;/div&gt;</content><author><name></name></author><summary type="html">After getting the cluster set up in the previous post, it was time to finally play with Dask on the cluster. Thankfully, there are dask-kubernetes and dask-docker projects that provide the framework to do this. Since I&amp;#8217;m still new to Dask, I decided to start off by using Dask from a local notebook (in retrospect maybe not the best choice).</summary></entry><entry><title type="html">Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM</title><link href="/https://scalingpythonml.com/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html" rel="alternate" type="text/html" title="Setting up K3s (lightweight Kubernetes) with Persistent Volumes and Minio on ARM" /><published>2020-10-18T00:00:00-07:00</published><updated>2020-10-18T00:00:00-07:00</updated><id>/https://scalingpythonml.com/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm</id><content type="html" xml:base="/https://scalingpythonml.com/2020/10/18/setting-up-k3s-with-pvs-and-minio-on-arm.html">&lt;p&gt;After the &lt;a href=&quot;http://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html&quot;&gt;last adventure&lt;/a&gt; of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.&lt;/p&gt;
 
-Software-wise, I ended up deciding on using [K3s](https://k3s.io/) for the Kubernetes deployment, and [Rook](https://rook.io/) with Ceph for the persistent volumes. And while I don't travel nearly as much as I used to, I also set up [tailscale for VPN access](https://tailscale.com/) from the exciting distant location of my girlfriend's house (and incase we ended up having to leave due to air quality).
+&lt;p&gt;Software-wise, I ended up deciding on using &lt;a href=&quot;https://k3s.io/&quot;&gt;K3s&lt;/a&gt; for the Kubernetes deployment, and &lt;a href=&quot;https://rook.io/&quot;&gt;Rook&lt;/a&gt; with Ceph for the persistent volumes. And while I don’t travel nearly as much as I used to, I also set up &lt;a href=&quot;https://tailscale.com/&quot;&gt;tailscale for VPN access&lt;/a&gt; from the exciting distant location of my girlfriend’s house (and incase we ended up having to leave due to air quality).&lt;/p&gt;
 
+&lt;h2 id=&quot;building-the-base-image-for-the-raspberry-pis&quot;&gt;Building the base image for the Raspberry Pis&lt;/h2&gt;
 
-## Building the base image for the Raspberry Pis
+&lt;p&gt;For the Raspberry Pis I decided to use the Ubuntu Raspberry Pi image as its base. The Raspberry Pis boot off of microsd cards, which allows us to pre-build system images rather than running through the install process on each instance. My desktop is an x86, but by following &lt;a href=&quot;https://docs.j7k6.org/raspberry-pi-chroot-armv7-qemu/&quot;&gt;this guide&lt;/a&gt;, I was able to set up an emulation layer so I could cross-build the image for the ARM Raspberry Pis.&lt;/p&gt;
 
-For the Raspberry Pis I decided to use the Ubuntu Raspberry Pi image as its base. The Raspberry Pis boot off of microsd cards, which allows us to pre-build system images rather than running through the install process on each instance. My desktop is an x86, but by following [this guide](https://docs.j7k6.org/raspberry-pi-chroot-armv7-qemu/), I was able to set up an emulation layer so I could cross-build the image for the ARM Raspberry Pis.
+&lt;p&gt;I pre-installed the base layer with Avahi (so the workers and find the leader), ZFS (to create a local storage layer to back our volumes), and necessary container tools. This step ended up taking a while, but I made the most of it by re-using the same image on multiple workers. I also had this stage copy over some configuration files, which didn’t depend on having emulation set up.&lt;/p&gt;
 
-I pre-installed the base layer with Avahi (so the workers and find the leader), ZFS (to create a local storage layer to back our volumes), and necessary container tools. This step ended up taking a while, but I made the most of it by re-using the same image on multiple workers. I also had this stage copy over some configuration files, which didn't depend on having emulation set up.
+&lt;p&gt;However, not everything is easily baked into an image. For example, at first boot, the leader node installs K3s and generates a certificate. Also, when each worker first boots, it connects to the leader and fetches the configuration required to join the cluster. Ubuntu has a mechanism for this (called cloud-init), but rather than figure out a new system I went with the old school self-disabling init-script to do the “first boot” activities.&lt;/p&gt;
 
-However, not everything is easily baked into an image. For example, at first boot, the leader node installs K3s and generates a certificate. Also, when each worker first boots, it connects to the leader and fetches the configuration required to join the cluster. Ubuntu has a mechanism for this (called cloud-init), but rather than figure out a new system I went with the old school self-disabling init-script to do the &quot;first boot&quot; activities.
+&lt;h2 id=&quot;setting-up-the-jetsons--my-one-x86-machine&quot;&gt;Setting up the Jetsons &amp;amp; my one x86 machine&lt;/h2&gt;
 
+&lt;p&gt;Unlike the Raspberry Pis, the Jetson AGX’s &amp;amp; x86 machines have internal storage that they boot from. While the Jetson nano does boot from a microsd card, the images available are installer images that require user interaction to set up. Thankfully, since I wrote everything down in a shell script, it was fairly simple to install the same packages and do the same setup on the Raspberry Pis.&lt;/p&gt;
 
-## Setting up the Jetsons &amp; my one x86 machine
+&lt;p&gt;By default, K3s uses containerd to execute its containers. I found another interesting &lt;a href=&quot;https://www.virtualthoughts.co.uk/2020/03/24/k3s-and-nvidia-jetson-nano/&quot;&gt;blog post on using K3s on Jetsons&lt;/a&gt;, and the main changes that I needed for the setup is to switch from containerd to docker and to configure docker to use the “nvidia” runtime as the default.&lt;/p&gt;
 
-Unlike the Raspberry Pis, the Jetson AGX's &amp; x86 machines have internal storage that they boot from. While the Jetson nano does boot from a microsd card, the images available are installer images that require user interaction to set up. Thankfully, since I wrote everything down in a shell script, it was fairly simple to install the same packages and do the same setup on the Raspberry Pis.
+&lt;h2 id=&quot;getting-the-cluster-to-work&quot;&gt;Getting the cluster to work&lt;/h2&gt;
 
-By default, K3s uses containerd to execute its containers. I found another interesting [blog post on using K3s on Jetsons](https://www.virtualthoughts.co.uk/2020/03/24/k3s-and-nvidia-jetson-nano/), and the main changes that I needed for the setup is to switch from containerd to docker and to configure docker to use the &quot;nvidia&quot; runtime as the default.
+&lt;p&gt;So, despite pre-baking the images, and having scripts to install “everything,” I ended up running into a bunch of random problems along the way. These spanned everything from hardware to networking to my software setup.&lt;/p&gt;
 
+&lt;p&gt;The leader node started pretty much as close to perfect as possible, and one of the two workers Raspberry Pis came right up. The second worker Pi kept spitting out malformed packets on the switch – and I’m not really sure what’s going on with that one – but the case did melt a little bit, which makes me think there might have been a hardware issue with that one node. I did try replacing the network cable and putting it into a different port, but got the same results. When I replaced it with a different Pi everything worked just fine, so I’ll debug the broken node when I’ve got some spare time.&lt;/p&gt;
 
-## Getting the cluster to work
+&lt;p&gt;I also had some difficulty with my Jetson Nano not booting. At first, I thought maybe the images I was baking were no good, but then I tried the stock image along with a system reset, and that didn’t get me any further. Eventually I tried a new microsd card along with the stock image and shorting out pin 40 and it booted like a champ.&lt;/p&gt;
 
-So, despite pre-baking the images, and having scripts to install &quot;everything,&quot; I ended up running into a bunch of random problems along the way. These spanned everything from hardware to networking to my software setup.
+&lt;p&gt;On the networking side, I have a fail-over configured for my home network. However, it seems that despite my thinking I had my router configured to fail-over only if the primary connection has an outage and not do any load-balancing otherwise, I kept getting random connection issues. Once I disabled the fail-over connections the networking issues disappeared. I’m not completely sure what’s going on with this part, but for now, I can just manually do a failover if sonic goes out.&lt;/p&gt;
 
-The leader node started pretty much as close to perfect as possible, and one of the two workers Raspberry Pis came right up. The second worker Pi kept spitting out malformed packets on the switch -- and I'm not really sure what's going on with that one -- but the case did melt a little bit, which makes me think there might have been a hardware issue with that one node. I did try replacing the network cable and putting it into a different port, but got the same results. When I replaced it with a different Pi everything worked just fine, so I'll debug the broken node when I've got some spare time.
+&lt;p&gt;On the software side, Avahi worked fine on all of the ARM boards but for some reason doesn’t seem to be working on the x86 node The only difference that I could figure was that the x86 node has a static lease configured with the DHCP server, but I don’t think that would cause this issue. While having local DNS between the worker nodes would be useful, this was getting near the end of the day, so I just added the leader to the x86’s node’s host files and called it a day. The software issues lead us nicely into the self caused issues I had trying to get persistent volumes working.&lt;/p&gt;
 
-I also had some difficulty with my Jetson Nano not booting. At first, I thought maybe the images I was baking were no good, but then I tried the stock image along with a system reset, and that didn't get me any further. Eventually I tried a new microsd card along with the stock image and shorting out pin 40 and it booted like a champ.
+&lt;h2 id=&quot;getting-persistent-volumes-working&quot;&gt;Getting persistent volumes working&lt;/h2&gt;
 
-On the networking side, I have a fail-over configured for my home network. However, it seems that despite my thinking I had my router configured to fail-over only if the primary connection has an outage and not do any load-balancing otherwise, I kept getting random connection issues. Once I disabled the fail-over connections the networking issues disappeared. I'm not completely sure what's going on with this part, but for now, I can just manually do a failover if sonic goes out.
+&lt;p&gt;One of the concepts I’m interested in playing with is fault tolerance. One potential mechanism for this is using persistent volumes to store some kind of state and recovering from them. In this situation we want our volumes to remain working even if we take a node out of service, so we can’t just depend on local volume path provisioning to test this out.&lt;/p&gt;
 
-On the software side, Avahi worked fine on all of the ARM boards but for some reason doesn't seem to be working on the x86 node The only difference that I could figure was that the x86 node has a static lease configured with the DHCP server, but I don't think that would cause this issue. While having local DNS between the worker nodes would be useful, this was getting near the end of the day, so I just added the leader to the x86's node's host files and called it a day. The software issues lead us nicely into the self caused issues I had trying to get persistent volumes working.
+&lt;p&gt;There are many different projects that could provide persistent volumes on Kubernetes. My first attempt was with GlusterFS; however, the Gluster Kubernetes project has been “archived.” So after some headaches, I moved on to trying Rook and Ceph. Getting Rook and Ceph running together ended up being quite the learning adventure; both Kris and Duffy jumped on a video call with me to help figure out what was going on. After a lot of debugging – they noticed that it was an architecture issue – namely, many of the CSI containers were not yet cross-compiled for ARM. We did a lot of sleuthing and found unofficial multi-arch versions of these containers. Since then, the &lt;a href=&quot;https://github.com/raspbernetes/multi-arch-images&quot;&gt;rasbernetes&lt;/a&gt; project has started cross-compiling the CSI containers, I’ve switched to using as it’s a bit simpler to keep track of.&lt;/p&gt;
 
-
-## Getting persistent volumes working
-
-One of the concepts I'm interested in playing with is fault tolerance. One potential mechanism for this is using persistent volumes to store some kind of state and recovering from them. In this situation we want our volumes to remain working even if we take a node out of service, so we can't just depend on local volume path provisioning to test this out.
-
-There are many different projects that could provide persistent volumes on Kubernetes. My first attempt was with GlusterFS; however, the Gluster Kubernetes project has been &quot;archived.&quot; So after some headaches, I moved on to trying Rook and Ceph. Getting Rook and Ceph running together ended up being quite the learning adventure; both Kris and Duffy jumped on a video call with me to help figure out what was going on. After a lot of debugging -- they noticed that it was an architecture issue -- namely, many of the CSI containers were not yet cross-compiled for ARM. We did a lot of sleuthing and found unofficial multi-arch versions of these containers. Since then, the [rasbernetes](https://github.com/raspbernetes/multi-arch-images) project has started cross-compiling the CSI containers, I've switched to using as it's a bit simpler to keep track of.
-
-![Image of rook/ceph status reporting ok](/images/rook-ceph-works.jpeg)
+&lt;p&gt;&lt;img src=&quot;/images/rook-ceph-works.jpeg&quot; alt=&quot;Image of rook/ceph status reporting ok&quot; /&gt;&lt;/p&gt;
 
 &lt;!-- From setup_rook.sh --&gt;
-```bash
-pushd /rook/cluster/examples/kubernetes/ceph
-kubectl create -f common.yaml
-kubectl create -f rook_operator_arm64.yaml
-kubectl create -f rook_cluster.yaml
-kubectl create -f ./csi/rbd/storageclass.yaml
-```
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;pushd&lt;/span&gt; /rook/cluster/examples/kubernetes/ceph
+kubectl create &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; common.yaml
+kubectl create &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; rook_operator_arm64.yaml
+kubectl create &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; rook_cluster.yaml
+kubectl create &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; ./csi/rbd/storageclass.yaml
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-## Adding an object store
+&lt;h2 id=&quot;adding-an-object-store&quot;&gt;Adding an object store&lt;/h2&gt;
 
-During my first run of [Apache Spark on the new cluster](https://www.youtube.com/watch?v=V1SkEl1r4Pg&amp;t=6s), I was reminded of the usefulness of an object-store. I'm used to working in an environment where I have an object store available. Thankfully MinIO is available to provide an S3 compatible object store on Kube. It can be backed by the persistent volumes I set up using Rook &amp; Ceph. It can also use local storage, but I decided to use it as a first test of the persistent volumes. Once I had fixed the issues with Ceph, MinIO deployed relatively simply [using a helm chart](https://github.com/minio/charts).
+&lt;p&gt;During my first run of &lt;a href=&quot;https://www.youtube.com/watch?v=V1SkEl1r4Pg&amp;amp;t=6s&quot;&gt;Apache Spark on the new cluster&lt;/a&gt;, I was reminded of the usefulness of an object-store. I’m used to working in an environment where I have an object store available. Thankfully MinIO is available to provide an S3 compatible object store on Kube. It can be backed by the persistent volumes I set up using Rook &amp;amp; Ceph. It can also use local storage, but I decided to use it as a first test of the persistent volumes. Once I had fixed the issues with Ceph, MinIO deployed relatively simply &lt;a href=&quot;https://github.com/minio/charts&quot;&gt;using a helm chart&lt;/a&gt;.&lt;/p&gt;
 
-
-While MinIO does build docker containers for arm64 and amd64, it gives them seperate tags. Since I've got a mix of x86 machines and arm machines in the same cluster I ended up using an un-official multi-arch build. I did end up pinning it to the x86 machine for now, since I haven't had the time to recompile the kernels on the arm machines to support rbd.
+&lt;p&gt;While MinIO does build docker containers for arm64 and amd64, it gives them seperate tags. Since I’ve got a mix of x86 machines and arm machines in the same cluster I ended up using an un-official multi-arch build. I did end up pinning it to the x86 machine for now, since I haven’t had the time to recompile the kernels on the arm machines to support rbd.&lt;/p&gt;
 
 &lt;!-- From setup_minio.sh --&gt;
 
-```bash
-# Install minio using ceph to back our storage. Deploy on the x86 because we don't have the rbd kernel module on the ARM nodes. Also we want to save the arm nodes for compute.
-helm install --namespace minio --generate-name minio/minio --set   persistence.storageClass=rook-ceph-block,nodeSelector.&quot;beta\\.kubernetes\\.io/arch&quot;=amd64
-# Do a helm ls and find the deployment name name
-deployment_name=$(helm ls -n minio | cut -f 1 | tail -n 1)
-ACCESS_KEY=$(kubectl get secret -n minio &quot;$deployment_name&quot; -o jsonpath=&quot;{.data.accesskey}&quot; | base64 --decode); SECRET_KEY=$(kubectl get secret -n minio &quot;$deployment_name&quot; -o jsonpath=&quot;{.data.secretkey}&quot; | base64 --decode)
-# Defaults are &quot;YOURACCESSKEY&quot; and &quot;YOURSECRETKEY&quot;
-mc alias set &quot;${deployment_name}-local&quot; http://localhost:9000 &quot;$ACCESS_KEY&quot; &quot;$SECRET_KEY&quot; --api s3v4
-mc ls &quot;${deployment_name}-local&quot;
-mc mb &quot;${deployment_name}-local&quot;://dask-test
-```
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# Install minio using ceph to back our storage. Deploy on the x86 because we don't have the rbd kernel module on the ARM nodes. Also we want to save the arm nodes for compute.&lt;/span&gt;
+helm &lt;span class=&quot;nb&quot;&gt;install&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--namespace&lt;/span&gt; minio &lt;span class=&quot;nt&quot;&gt;--generate-name&lt;/span&gt; minio/minio &lt;span class=&quot;nt&quot;&gt;--set&lt;/span&gt;   persistence.storageClass&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;rook-ceph-block,nodeSelector.&lt;span class=&quot;s2&quot;&gt;&quot;beta&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.kubernetes&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\\&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.io/arch&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;amd64
+&lt;span class=&quot;c&quot;&gt;# Do a helm ls and find the deployment name name&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;deployment_name&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;helm &lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; minio | &lt;span class=&quot;nb&quot;&gt;cut&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; 1 | &lt;span class=&quot;nb&quot;&gt;tail&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; 1&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;ACCESS_KEY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;kubectl get secret &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; minio &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$deployment_name&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;jsonpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;{.data.accesskey}&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;base64&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--decode&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;SECRET_KEY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;$(&lt;/span&gt;kubectl get secret &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; minio &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$deployment_name&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;jsonpath&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;{.data.secretkey}&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;base64&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--decode&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# Defaults are &quot;YOURACCESSKEY&quot; and &quot;YOURSECRETKEY&quot;&lt;/span&gt;
+mc &lt;span class=&quot;nb&quot;&gt;alias set&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;deployment_name&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;-local&quot;&lt;/span&gt; http://localhost:9000 &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$ACCESS_KEY&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$SECRET_KEY&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--api&lt;/span&gt; s3v4
+mc &lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;deployment_name&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;-local&quot;&lt;/span&gt;
+mc mb &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;deployment_name&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;-local&quot;&lt;/span&gt;://dask-test
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
+&lt;h2 id=&quot;getting-kubectl-working-from-my-desktop&quot;&gt;Getting kubectl working from my desktop&lt;/h2&gt;
 
-## Getting kubectl working from my desktop
+&lt;p&gt;Once I had K3s set up, I wanted to be able to access it from my desktop without having to SSH to a node in the cluster. The &lt;a href=&quot;https://rancher.com/docs/k3s/latest/en/cluster-access/&quot;&gt;K3s documentation says&lt;/a&gt; to copy &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/rancher/k3s/k3s.yaml&lt;/code&gt; from the cluster to your local &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;~/.kube/config&lt;/code&gt; and replace the string localhost with the ip/DNS of the leader. Since I had multiple existing clusters I copied the part under each top-level key to the corresponding key, while changing the “default” string to k3s when copying so that I could remember the context better. The first time I did this I got the whitespace mixed up which lead to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Error in configuration: context was not found for specified context: k3s&lt;/code&gt; – but after I fixed my YAML everything worked :)&lt;/p&gt;
 
-Once I had K3s set up, I wanted to be able to access it from my desktop without having to SSH to a node in the cluster. The [K3s documentation says](https://rancher.com/docs/k3s/latest/en/cluster-access/) to copy `/etc/rancher/k3s/k3s.yaml` from the cluster to your local `~/.kube/config` and replace the string localhost with the ip/DNS of the leader. Since I had multiple existing clusters I copied the part under each top-level key to the corresponding key, while changing the &quot;default&quot; string to k3s when copying so that I could remember the context better. The first time I did this I got the whitespace mixed up which lead to `Error in configuration: context was not found for specified context: k3s` -- but after I fixed my YAML everything worked :)
+&lt;h2 id=&quot;setting-up-a-vpn-solution&quot;&gt;Setting up a VPN solution&lt;/h2&gt;
 
+&lt;p&gt;While shelter in place has made accessing my home network remotely less important, I do still occasionally get out of the house while staying within my social bubble. Some of my friends from University/Co-Op are now at a company called tailscale, which does magic with WireGuard to allow even double-natted networks to have VPNs. Since I was doing this part as an afterthought, I didn’t have tailscale installed on all of the nodes, so I followed the &lt;a href=&quot;https://tailscale.com/kb/1019/subnets&quot;&gt;instructions to enable subnets &lt;/a&gt;(note: I missed enabling the “Enable subnet routes” in the admin console the first time) and have my desktop act as a “gateway” host for the K8s cluster when I’m “traveling.” With tailscale, set up I was able to run kubectl from my laptop at Nova’s place :)&lt;/p&gt;
 
+&lt;p&gt;Josh Patterson has &lt;a href=&quot;https://medium.com/rapids-ai/rapids-anywhere-with-tailscale-my-mobile-device-has-an-rtx-3090-1ce0c7b443fe?source=rss----2d7ba3077a44---4&quot;&gt;a blog post on using tailscale with RAPIDS&lt;/a&gt;.&lt;/p&gt;
 
-## Setting up a VPN solution
+&lt;h2 id=&quot;conclusion--alternatives&quot;&gt;Conclusion &amp;amp; alternatives&lt;/h2&gt;
 
-While shelter in place has made accessing my home network remotely less important, I do still occasionally get out of the house while staying within my social bubble. Some of my friends from University/Co-Op are now at a company called tailscale, which does magic with WireGuard to allow even double-natted networks to have VPNs. Since I was doing this part as an afterthought, I didn't have tailscale installed on all of the nodes, so I followed the [instructions to enable subnets ](https://tailscale.com/kb/1019/subnets)(note: I missed enabling the &quot;Enable subnet routes&quot; in the admin console the first time) and have my desktop act as a &quot;gateway&quot; host for the K8s cluster when I'm &quot;traveling.&quot; With tailscale, set up I was able to run kubectl from my laptop at Nova's place :)
+&lt;p&gt;The setup process was a bit more painful than I expected, but it was mostly due to my own choices. In retrospect, building images and flashing them was relatively slow with the emulation required on my old desktop. It would have been much easier to do a non-distributed volume deployment, like local volumes. but I want to set up PVs that I can experiment with using for fault recovery. Nova pointed out that I could have set up sshfs or NFS and could have gotten PVs working with a lot less effort, but by the time we had that conversation the sunk cost fallacy had me believing just one more “quick fix” was needed and then it would all magically work. Instead of K3s I could have used kubeadm but that seemed relatively heavyweight. Instead of installing K3s “manually” the &lt;a href=&quot;https://ma.ttias.be/deploying-highly-available-k3s-k3sup/&quot;&gt;k3sup project&lt;/a&gt; could have simplified some of this work. However, since I have a mix of different types of nodes, I wanted a bit more control.&lt;/p&gt;
 
+&lt;p&gt;Now that the cluster is set up, I’m going to test the cluster out some more with Apache Spark, the distributed computing program I’m most familiar with. Once we’ve made sure the basics are working with Spark, I’m planning on exploring how to get dask running. You can follow along with my adventures on my &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;YouTube channel over here&lt;/a&gt;, or &lt;a href=&quot;/mailinglist.html&quot;&gt;subscribe to the mailing list&lt;/a&gt; to keep up to date when I write a new post.&lt;/p&gt;</content><author><name></name></author><summary type="html">After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.</summary></entry><entry><title type="html">Building the Test Cluster</title><link href="/https://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html" rel="alternate" type="text/html" title="Building the Test Cluster" /><published>2020-09-20T00:00:00-07:00</published><updated>2020-09-20T00:00:00-07:00</updated><id>/https://scalingpythonml.com/2020/09/20/building-the-physical-cluster</id><content type="html" xml:base="/https://scalingpythonml.com/2020/09/20/building-the-physical-cluster.html">&lt;p&gt;To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the &lt;a href=&quot;https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors&quot;&gt;noisy neighbor problem&lt;/a&gt;
+with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.&lt;/p&gt;
 
-Josh Patterson has [a blog post on using tailscale with RAPIDS](https://medium.com/rapids-ai/rapids-anywhere-with-tailscale-my-mobile-device-has-an-rtx-3090-1ce0c7b443fe?source=rss----2d7ba3077a44---4).
+&lt;h2 id=&quot;building-the-rack&quot;&gt;Building the Rack&lt;/h2&gt;
 
+&lt;p&gt;If I’m honest, a large part of my wanting to do this project is that ever since I was a small kid, I’ve always dreamed of running “proper” networking gear (expired CCNA club represent). I got a &lt;a href=&quot;https://amzn.to/32OCQEq&quot;&gt;rack&lt;/a&gt; and some shelves. (I also got an avocado tree to put on top and a &lt;a href=&quot;https://www.etsy.com/listing/787021025/kubectl-corgi-kubernetes-sticker?ga_order=most_relevant&amp;amp;ga_search_type=all&amp;amp;ga_view_type=gallery&amp;amp;ga_search_query=kubernetes&amp;amp;ref=sr_gallery-1-2&amp;amp;organic_search_click=1&amp;amp;col=1&quot;&gt;cute kubecuddle sticker&lt;/a&gt; for good luck)&lt;/p&gt;
 
-## Conclusion &amp; alternatives
+&lt;p&gt;&lt;img src=&quot;/images/rack.jpg&quot; alt=&quot;Image of my rack with avocado tree on top&quot; /&gt;&lt;/p&gt;
 
-The setup process was a bit more painful than I expected, but it was mostly due to my own choices. In retrospect, building images and flashing them was relatively slow with the emulation required on my old desktop. It would have been much easier to do a non-distributed volume deployment, like local volumes. but I want to set up PVs that I can experiment with using for fault recovery. Nova pointed out that I could have set up sshfs or NFS and could have gotten PVs working with a lot less effort, but by the time we had that conversation the sunk cost fallacy had me believing just one more &quot;quick fix&quot; was needed and then it would all magically work. Instead of K3s I could have used kubeadm but that seemed relatively heavyweight. Instead of installing K3s &quot;manually&quot; the [k3sup project](https://ma.ttias.be/deploying-highly-available-k3s-k3sup/) could have simplified some of this work. However, since I have a mix of different types of nodes, I wanted a bit more control.
+&lt;p&gt;It turns out that putting together a rack is not nearly as much like LEGO as I had imagined. Some of the shelves I got ended up being very heavy (and some did not fit), but thankfully Nova came to the rescue when things got too heavy for me to move.&lt;/p&gt;
 
-Now that the cluster is set up, I'm going to test the cluster out some more with Apache Spark, the distributed computing program I'm most familiar with. Once we've made sure the basics are working with Spark, I'm planning on exploring how to get dask running. You can follow along with my adventures on my [YouTube channel over here](https://www.youtube.com/user/holdenkarau), or [subscribe to the mailing list](/mailinglist.html) to keep up to date when I write a new post.</content><author><name></name></author><summary type="html">After the last adventure of getting the rack built and acquiring the machines, it was time to set up the software. Originally, I had planned to do this in a day or two, but in practice, it ran like so many other “simple” projects and some things I had assumed would be “super quick” ended up taking much longer than planned.</summary></entry><entry><title type="html">Building the Test Cluster</title><link href="/2020/09/20/building-the-physical-cluster.html" rel="alternate" type="text/html" title="Building the Test Cluster" /><published>2020-09-20T00:00:00-07:00</published><updated>2020-09-20T00:00:00-07:00</updated><id>/2020/09/20/building-the-physical-cluster</id><content type="html" xml:base="/2020/09/20/building-the-physical-cluster.html">To ensure that the results between tests are as comparable as possible, I'm using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the [noisy neighbor problem](https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors)
-with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.
+&lt;p&gt;After running the rack for about a day, I got a complaint from my neighbor about how loud the fan was, so I swapped it out for some &lt;a href=&quot;https://amzn.to/32NpeJN&quot;&gt;quieter fans&lt;/a&gt;.&lt;/p&gt;
 
-## Building the Rack
+&lt;h2 id=&quot;the-hosts&quot;&gt;The Hosts&lt;/h2&gt;
 
-If I'm honest, a large part of my wanting to do this project is that ever since I was a small kid, I've always dreamed of running &quot;proper&quot; networking gear (expired CCNA club represent). I got a [rack](https://amzn.to/32OCQEq) and some shelves. (I also got an avocado tree to put on top and a [cute kubecuddle sticker](https://www.etsy.com/listing/787021025/kubectl-corgi-kubernetes-sticker?ga_order=most_relevant&amp;ga_search_type=all&amp;ga_view_type=gallery&amp;ga_search_query=kubernetes&amp;ref=sr_gallery-1-2&amp;organic_search_click=1&amp;col=1) for good luck)
+&lt;p&gt;The hosts themselves are a mixture of machines. I picked up three &lt;a href=&quot;https://www.raspberrypi.org/products/raspberry-pi-4-model-b/&quot;&gt;Rasberry Pi 4Bs&lt;/a&gt;. I’m also running a &lt;a href=&quot;https://amzn.to/3kBFG6c&quot;&gt;Jetson Nano&lt;/a&gt; and three &lt;a href=&quot;https://amzn.to/3jzO58O&quot;&gt;Jetson AGX Xavier’s&lt;/a&gt; to allow me to experiment with GPU acceleration. To support any x86 only code, I also have a small refurbed x86 present.&lt;/p&gt;
 
-![Image of my rack with avocado tree on top](/images/rack.jpg)
+&lt;p&gt;For storage I scrounged up some of the free flash drives I’ve gotten from conferences over the years to act as storage. This initial set up was not very fast, so I added some inexpensive on-sale external SSD drives.&lt;/p&gt;
 
-It turns out that putting together a rack is not nearly as much like LEGO as I had imagined. Some of the shelves I got ended up being very heavy (and some did not fit), but thankfully Nova came to the rescue when things got too heavy for me to move.
+&lt;h2 id=&quot;setting-up-kubernetes&quot;&gt;Setting up Kubernetes&lt;/h2&gt;
 
+&lt;p&gt;Since I want to be able to swap between the different Python scaling tools easily, I chose Kubernetes as the base cluster layer rather than installing directly on the nodes. Since it is easy to deploy, I used K3s as the cluster manager. The biggest pain here was figuring out why the storage provisioning I was trying to use wasn’t working, but thankfully Duffy came to the rescue, and we figured it out.&lt;/p&gt;
 
-After running the rack for about a day, I got a complaint from my neighbor about how loud the fan was, so I swapped it out for some [quieter fans](https://amzn.to/32NpeJN).
+&lt;h2 id=&quot;whats-next&quot;&gt;What’s next?&lt;/h2&gt;
 
-## The Hosts
+&lt;p&gt;Up next, I’ll start exploring how the different tools work in this environment. At the very start, I’ll just run through each tool’s tutorials and simulate some network and node failures to see how resilient they are. Once I’ve got a better handle on how each tool works, I’m planning on exploring how each of them approaches the problem of scaling pandas operations. Once that’s done, we can start to get in a lot deeper and see where each tool shines. If you are interested in following along, check out my &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;Youtube Channel on open source programming&lt;/a&gt; where I will try and stream the process that goes into each post. You can also &lt;a href=&quot;https://www.introductiontomlwithkubeflow.com/?from=introductiontomlwithkubeflow.com&quot;&gt;subscribe to the mailing list for notifications on this on my books&lt;/a&gt; when I get something working well enough to make a new post :)&lt;/p&gt;
 
-The hosts themselves are a mixture of machines. I picked up three [Rasberry Pi 4Bs](https://www.raspberrypi.org/products/raspberry-pi-4-model-b/). I'm also running a [Jetson Nano](https://amzn.to/3kBFG6c) and three [Jetson AGX Xavier's](https://amzn.to/3jzO58O) to allow me to experiment with GPU acceleration. To support any x86 only code, I also have a small refurbed x86 present.
+&lt;h3 id=&quot;disclaimer&quot;&gt;Disclaimer&lt;/h3&gt;
 
+&lt;p&gt;This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark and have &lt;a href=&quot;https://amzn.to/2O6KYYH&quot;&gt;some books published on the topic&lt;/a&gt; that may influence my views, but my views do not represent the project.&lt;/p&gt;
 
-For storage I scrounged up some of the free flash drives I've gotten from conferences over the years to act as storage. This initial set up was not very fast, so I added some inexpensive on-sale external SSD drives.
+&lt;p&gt;In as much as possible, I’ve used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.&lt;/p&gt;</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry><entry><title type="html">A First (Brief) Look at Ray on Kubernetes</title><link href="/https://scalingpythonml.com/2020/08/16/poke-at-ray.html" rel="alternate" type="text/html" title="A First (Brief) Look at Ray on Kubernetes" /><published>2020-08-16T00:00:00-07:00</published><updated>2020-08-16T00:00:00-07:00</updated><id>/https://scalingpythonml.com/2020/08/16/poke-at-ray</id><content type="html" xml:base="/https://scalingpythonml.com/2020/08/16/poke-at-ray.html">&lt;p&gt;After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same&lt;sup id=&quot;fnref:lab&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:lab&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising.&lt;/p&gt;
 
-## Setting up Kubernetes
+&lt;p&gt;This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark &lt;a href=&quot;https://amzn.to/2O6KYYH&quot;&gt;and have some books published on the topic&lt;/a&gt; that may influence my views, but my views do not represent the project.&lt;/p&gt;
 
-Since I want to be able to swap between the different Python scaling tools easily, I chose Kubernetes as the base cluster layer rather than installing directly on the nodes. Since it is easy to deploy, I used K3s as the cluster manager. The biggest pain here was figuring out why the storage provisioning I was trying to use wasn't working, but thankfully Duffy came to the rescue, and we figured it out.
+&lt;h2 id=&quot;installing-ray&quot;&gt;Installing Ray&lt;/h2&gt;
 
-## What's next?
+&lt;p&gt;&lt;a href=&quot;https://docs.ray.io/en/latest/installation.html&quot;&gt;Installing Ray&lt;/a&gt; was fairly simple, especially due to its lack of JVM dependencies. The one weird thing I encountered while I was installing Ray is the fact that its developers decided to “vendor” Apache Arrow. This was disappointing because I’m interested in using Arrow to get some of these tools to play together and vendored libraries could make it a bit harder. I filed an issue with the ray-project folks, and they quickly responded that they were working on it and then resolved it, so this is something I want to come back to.&lt;/p&gt;
 
-Up next, I'll start exploring how the different tools work in this environment. At the very start, I'll just run through each tool's tutorials and simulate some network and node failures to see how resilient they are. Once I've got a better handle on how each tool works, I'm planning on exploring how each of them approaches the problem of scaling pandas operations. Once that's done, we can start to get in a lot deeper and see where each tool shines. If you are interested in following along, check out my [Youtube Channel on open source programming](https://www.youtube.com/user/holdenkarau) where I will try and stream the process that goes into each post. You can also [subscribe to the mailing list for notifications on this on my books](https://www.introductiontomlwithkubeflow.com/?from=introductiontomlwithkubeflow.com) when I get something working well enough to make a new post :)
+&lt;h2 id=&quot;running-ray-on-k8s&quot;&gt;Running Ray on K8s&lt;/h2&gt;
 
-### Disclaimer
+&lt;p&gt;Since I had not yet built my dedicated test cluster, I decided to give Ray on Kubernetes a shot. The documentation had some room for improvement and I got lost a few times along the way, but on my second try a few days later using the nightly builds I managed to get it running.&lt;/p&gt;
 
-This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I'm involved with. I am one of the developers of Apache Spark and have [some books published on the topic](https://amzn.to/2O6KYYH) that may influence my views, but my views do not represent the project.
+&lt;h2 id=&quot;fault-tolerance&quot;&gt;Fault Tolerance&lt;/h2&gt;
 
-In as much as possible, I've used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry><entry><title type="html">A First (Brief) Look at Ray on Kubernetes</title><link href="/2020/08/16/poke-at-ray.html" rel="alternate" type="text/html" title="A First (Brief) Look at Ray on Kubernetes" /><published>2020-08-16T00:00:00-07:00</published><updated>2020-08-16T00:00:00-07:00</updated><id>/2020/08/16/poke-at-ray</id><content type="html" xml:base="/2020/08/16/poke-at-ray.html">After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same[^lab] research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) -- and as someone who's spent way more time than she would like getting the JVM and Python to play together, Ray and it's cohort seem quite promising.
+&lt;p&gt;Fault tolerance is especially important in distributed systems like Spark and Ray since as we add more and more computers the chance of one of them failing, or having the network between them fail increases. Different distributed systems take different approaches to fault tolerance, Map-Reduce achieves its fault tolerance by using distributed persistent storage and Spark uses recompute on failures.&lt;sup id=&quot;fnref:fault_tol&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:fault_tol&quot; class=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;&lt;/p&gt;
 
-This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I'm involved with. I am one of the developers of Apache Spark [and have some books published on the topic](https://amzn.to/2O6KYYH) that may influence my views, but my views do not represent the project.
+&lt;h2 id=&quot;fault-tolerance-limitations&quot;&gt;Fault Tolerance Limitations&lt;/h2&gt;
 
-## Installing Ray
+&lt;p&gt;One of the things that really excites me about Ray is its actor model for state. This is really important for some machine learning algorithms, and in Spark, our limitations around handling state (like model weights) have made streaming machine learning algorithms very challenging. One of the big reasons for the limitations around how state is handled is fault tolerance.&lt;/p&gt;
 
-[Installing Ray](https://docs.ray.io/en/latest/installation.html) was fairly simple, especially due to its lack of JVM dependencies. The one weird thing I encountered while I was installing Ray is the fact that its developers decided to &quot;vendor&quot; Apache Arrow. This was disappointing because I'm interested in using Arrow to get some of these tools to play together and vendored libraries could make it a bit harder. I filed an issue with the ray-project folks, and they quickly responded that they were working on it and then resolved it, so this is something I want to come back to.
+&lt;p&gt;To simulate a failure I created an actor and then killed the pod that was running the actor. Ray did not seem to have any automatic recovery here, which could be the right answer. In the future, I want to experiment and see if there is a way to pair Ray with a durable distributed database (or another system) to allow the recovery of actors.&lt;/p&gt;
 
-## Running Ray on K8s
+&lt;p&gt;I want to be clear: This is about the same as in Spark. Spark only&lt;sup id=&quot;fnref:spark_state&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:spark_state&quot; class=&quot;footnote&quot;&gt;3&lt;/a&gt;&lt;/sup&gt; allows state to accrue on the driver, and recovery of state on the failure of the driver requires some additional custom code.&lt;/p&gt;
 
-Since I had not yet built my dedicated test cluster, I decided to give Ray on Kubernetes a shot. The documentation had some room for improvement and I got lost a few times along the way, but on my second try a few days later using the nightly builds I managed to get it running.
+&lt;h2 id=&quot;whats-next&quot;&gt;What’s next?&lt;/h2&gt;
 
-## Fault Tolerance
+&lt;p&gt;The ray-project looks really interesting. Along with Dask and other new Python-first tools we’re entering a new era of options for scaling our Python ML code. Seeing Apache Arrow inside of Ray is reassuring since one of my considerations is how we can make our tools work together, and I think Arrow has the potential to serve as a bridge between the different parts of our ecosystem. Up next I’m going to try and set up Dask on my new K8s cluster, and then also re-create this initial experiment on physical hardware instead of Minikube. If you’ve got thoughts or suggestions for what you’d like to see next, please do send me an e-mail and file an issue against the webpage on GitHub.&lt;/p&gt;
 
-Fault tolerance is especially important in distributed systems like Spark and Ray since as we add more and more computers the chance of one of them failing, or having the network between them fail increases. Different distributed systems take different approaches to fault tolerance, Map-Reduce achieves its fault tolerance by using distributed persistent storage and Spark uses recompute on failures.[^fault_tol]
+&lt;p&gt;You can also follow along with my streams around &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;distributed computing and open-source on my YouTube channel&lt;/a&gt;. The two videos for this post are &lt;a href=&quot;https://www.youtube.com/watch?v=WBNmF-wyAlE&quot;&gt;Installing &amp;amp; Poking at Ray&lt;/a&gt; and &lt;a href=&quot;https://www.youtube.com/watch?v=IUI5okVvgbQ&quot;&gt;Trying the Ray Project on Kubernetes&lt;/a&gt;.&lt;/p&gt;
 
-## Fault Tolerance Limitations
+&lt;p&gt;If your interested in learning more about Ray and don’t want to wait for me, there is a &lt;a href=&quot;https://github.com/ray-project/&quot;&gt;great collection of tutorials in the project&lt;/a&gt;.&lt;/p&gt;
 
-One of the things that really excites me about Ray is its actor model for state. This is really important for some machine learning algorithms, and in Spark, our limitations around handling state (like model weights) have made streaming machine learning algorithms very challenging. One of the big reasons for the limitations around how state is handled is fault tolerance.
-
-To simulate a failure I created an actor and then killed the pod that was running the actor. Ray did not seem to have any automatic recovery here, which could be the right answer. In the future, I want to experiment and see if there is a way to pair Ray with a durable distributed database (or another system) to allow the recovery of actors.
-
-
-I want to be clear: This is about the same as in Spark. Spark only[^spark_state] allows state to accrue on the driver, and recovery of state on the failure of the driver requires some additional custom code.
-
-## What's next?
-
-The ray-project looks really interesting. Along with Dask and other new Python-first tools we're entering a new era of options for scaling our Python ML code. Seeing Apache Arrow inside of Ray is reassuring since one of my considerations is how we can make our tools work together, and I think Arrow has the potential to serve as a bridge between the different parts of our ecosystem. Up next I'm going to try and set up Dask on my new K8s cluster, and then also re-create this initial experiment on physical hardware instead of Minikube. If you've got thoughts or suggestions for what you'd like to see next, please do send me an e-mail and file an issue against the webpage on GitHub.
-
-You can also follow along with my streams around [distributed computing and open-source on my YouTube channel](https://www.youtube.com/user/holdenkarau). The two videos for this post are [Installing &amp; Poking at Ray](https://www.youtube.com/watch?v=WBNmF-wyAlE) and [Trying the Ray Project on Kubernetes](https://www.youtube.com/watch?v=IUI5okVvgbQ).
-
-If your interested in learning more about Ray and don't want to wait for me, there is a [great collection of tutorials in the project](https://github.com/ray-project/).
-
-[^lab]: Well… same-ish. It's technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you'll notice a lot of overlap.
-
-[^fault_tol]: Technically it's a bit more complicated, and Spark can use a hybrid of these two models. In some internal places (like it's ALS implementation and other iterative algorithms), Spark uses distributed persistent storage for fault tolerance.
-
-[^spark_state]: Streaming Spark is a bit different</content><author><name></name></author><summary type="html">After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same1 research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising. Well… same-ish. It’s technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you’ll notice a lot of overlap. &amp;#8617;</summary></entry></feed>
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:lab&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;Well… same-ish. It’s technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you’ll notice a lot of overlap. &lt;a href=&quot;#fnref:lab&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:fault_tol&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;Technically it’s a bit more complicated, and Spark can use a hybrid of these two models. In some internal places (like it’s ALS implementation and other iterative algorithms), Spark uses distributed persistent storage for fault tolerance. &lt;a href=&quot;#fnref:fault_tol&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:spark_state&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;Streaming Spark is a bit different &lt;a href=&quot;#fnref:spark_state&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same1 research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising. Well… same-ish. It’s technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you’ll notice a lot of overlap. &amp;#8617;</summary></entry></feed>
