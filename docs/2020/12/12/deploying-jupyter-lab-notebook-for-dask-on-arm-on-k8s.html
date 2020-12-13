@@ -187,7 +187,7 @@
 <div class="sect2">
 <h3 id="_configuring-the-container-images">Configuring the container images</h3>
 <div class="paragraph">
-<p>Now that you&#8217;ve built the container images, we need to configure our helm chart to use them. When you run <code>chartpress</code> inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link::https://v2.helm.sh/docs/chart_repository/[chart repository] or you can use the existing published helm chart and override the images.</p>
+<p>Now that you&#8217;ve built the container images, we need to configure our helm chart to use them. When you run <code>chartpress</code> inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a <a href="https://v2.helm.sh/docs/chart_repository/">chart repository</a> or you can use the existing published helm chart and override the images.</p>
 </div>
 <div class="paragraph">
 <p>To install with the existing published chart you can run <a href="#install_existing">[install_existing]</a>.</p>
@@ -320,7 +320,7 @@ spec:
 <div class="sectionbody">
 <div class="paragraph">
 <p>I was unable to get the JupyterHub GitHub plugin working, but it looks like there is
-an link::https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871[outstanding issue to refactor the auth configuration,]
+an <a href="https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871">outstanding issue to refactor the auth configuration,</a>
 so for now I just hard coded what is known as "dummy" authentication. I recommend using a different kind of authentication as soon as the refactoring is complete.</p>
 </div>
 <div class="listingblock">
@@ -429,7 +429,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role<span style="c
 <div class="sect2">
 <h3 id="_building-container-images">Building container images</h3>
 <div class="paragraph">
-<p>The link::https://github.com/dask/dask-docker[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub&#8217;s launcher. The first change needed is commenting out the auto start in <code>notebook/prepare.sh</code>. The other required change is swapping the Dockerfile with your cross-built &#8201;&#8212;&#8201;single-user-sample. I updated mine to also install some helpful libraries as in <a href="#my_dask_nb_dockerfile">[my_dask_nb_dockerfile]</a>:</p>
+<p>The <a href="https://github.com/dask/dask-docker">dask-docker</a> project contains a notebook container file; however, it is not designed for use with JupyterHub&#8217;s launcher. The first change needed is commenting out the auto start in <code>notebook/prepare.sh</code>. The other required change is swapping the Dockerfile with your cross-built &#8201;&#8212;&#8201;single-user-sample. I updated mine to also install some helpful libraries as in <a href="#my_dask_nb_dockerfile">[my_dask_nb_dockerfile]</a>:</p>
 </div>
 <div id="my_dask_nb_dockerfile" class="exampleblock">
 <div class="content">

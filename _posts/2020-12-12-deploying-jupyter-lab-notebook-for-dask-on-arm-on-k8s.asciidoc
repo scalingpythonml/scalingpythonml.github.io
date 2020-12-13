@@ -88,7 +88,7 @@ With jconfigurable-http-proxy no changes are necessary to the project it's self,
 
 === Configuring the container images
 
-Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link::$$https://v2.helm.sh/docs/chart_repository/$$[chart repository] or you can use the existing published helm chart and override the images.
+Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link:$$https://v2.helm.sh/docs/chart_repository/$$[chart repository] or you can use the existing published helm chart and override the images.
 
 
 To install with the existing published chart you can run <<install_existing>>.
@@ -158,7 +158,7 @@ With this change the service deployed successfully and Traefik (installed in K3s
 == Setting up Authentication
 
 I was unable to get the JupyterHub GitHub plugin working, but it looks like there is
-an link::$$https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871$$[outstanding issue to refactor the auth configuration,]
+an link:$$https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871$$[outstanding issue to refactor the auth configuration,]
 so for now I just hard coded what is known as "dummy" authentication. I recommend using a different kind of authentication as soon as the refactoring is complete.
 
 [source, yaml]
@@ -207,7 +207,7 @@ include::../subrepos/scalingpythonml/dask-examples/setup.sh[tags=setup_namespace
 
 === Building container images
 
-The link::$$https://github.com/dask/dask-docker$$[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub's launcher. The first change needed is commenting out the auto start in `notebook/prepare.sh`. The other required change is swapping the Dockerfile with your cross-built  -- single-user-sample. I updated mine to also install some helpful libraries as in <<my_dask_nb_dockerfile>>:
+The link:$$https://github.com/dask/dask-docker$$[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub's launcher. The first change needed is commenting out the auto start in `notebook/prepare.sh`. The other required change is swapping the Dockerfile with your cross-built  -- single-user-sample. I updated mine to also install some helpful libraries as in <<my_dask_nb_dockerfile>>:
 
 [[my_dask_nb_dockerfile]]
 ====
