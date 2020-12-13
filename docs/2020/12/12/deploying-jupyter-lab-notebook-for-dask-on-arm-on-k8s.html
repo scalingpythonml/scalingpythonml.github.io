@@ -435,7 +435,64 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role<span style="c
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span>include::../subrepos/dask-docker/notebook/Dockerfile</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2</span>
+
+USER root
+
+<span style="color: #008000; font-weight: bold">RUN</span> apt-get update <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> apt-get install -yq graphviz git build-essential <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> apt-get clean <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> rm -rf /var/lib/apt/lists/*
+
+<span style="color: #008000; font-weight: bold">RUN</span> touch /hello_holden
+
+USER <span style="color: #19177C">$NB_USER</span>
+
+<span style="color: #008000; font-weight: bold">RUN</span> conda install -c conda-forge --yes mamba
+<span style="color: #008000; font-weight: bold">RUN</span> mamba install --yes <span style="color: #19177C">python</span><span style="color: #666666">==3</span>.8.6
+<span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #666666">(</span>mamba install --yes <span style="color: #19177C">aiohttp</span><span style="color: #666666">==3</span>.7.1 <span style="color: #666666">||</span> pip install <span style="color: #19177C">aiohttp</span><span style="color: #666666">==3</span>.7.1 <span style="color: #666666">)</span>
+<span style="color: #008000; font-weight: bold">RUN</span> mamba install --yes <span style="color: #BB6622; font-weight: bold">\</span>
+    python-blosc <span style="color: #BB6622; font-weight: bold">\</span>
+    cytoolz <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #19177C">dask</span><span style="color: #666666">==2</span>.30.0 <span style="color: #BB6622; font-weight: bold">\</span>
+    dask-core<span style="color: #666666">==2</span>.30.0 <span style="color: #BB6622; font-weight: bold">\</span>
+    lz4 <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #19177C">numpy</span><span style="color: #666666">==1</span>.19.2 <span style="color: #BB6622; font-weight: bold">\</span>
+    ipywidgets <span style="color: #BB6622; font-weight: bold">\</span>
+    python-graphviz <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    mamba install --yes bokeh numba llvmlite
+<span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #666666">(</span>mamba install --yes fastparquet <span style="color: #666666">||</span> pip install fastparquet<span style="color: #666666">)</span>
+<span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #666666">(</span>mamba install --yes jupyter-server-proxy <span style="color: #666666">||</span> pip install jupyter-server-proxy<span style="color: #666666">)</span>
+<span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #666666">(</span>mamba install --yes dask-labextension<span style="color: #666666">==3</span>.0.0 <span style="color: #666666">||</span> pip install dask-labextension<span style="color: #666666">==3</span>.0.0<span style="color: #666666">)</span>
+<span style="color: #008000; font-weight: bold">RUN</span> jupyter labextension install @jupyter-widgets/jupyterlab-manager dask-labextension@3.0.0 @jupyterlab/server-proxy <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> jupyter serverextension <span style="color: #008000">enable</span> dask-labextension@3.0.0 @jupyterlab/server-proxy <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> pip install dask-kubernetes<span style="color: #666666">==0</span>.11.0 <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> jupyter lab clean <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> jlpm cache clean <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> npm cache clean --force <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.a&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.pyc&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/ -type f,l -name <span style="color: #BA2121">&#39;*.js.map&#39;</span> -delete <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name <span style="color: #BA2121">&#39;*.js&#39;</span> -not -name <span style="color: #BA2121">&#39;*.min.js&#39;</span> -delete <span style="color: #666666">||</span> <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;no bokeh static files to cleanup&quot;</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> rm -rf /opt/conda/pkgs
+
+USER root
+
+<span style="color: #408080; font-style: italic"># Create the /opt/app directory, and assert that Jupyter&#39;s NB_UID/NB_GID values</span>
+<span style="color: #408080; font-style: italic"># haven&#39;t changed.</span>
+<span style="color: #008000; font-weight: bold">RUN</span> mkdir /opt/app <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #666666">&amp;&amp;</span> <span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$NB_UID</span><span style="color: #BA2121">&quot;</span> !<span style="color: #666666">=</span> <span style="color: #BA2121">&quot;1000&quot;</span> <span style="color: #666666">]</span> <span style="color: #666666">||</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$NB_GID</span><span style="color: #BA2121">&quot;</span> !<span style="color: #666666">=</span> <span style="color: #BA2121">&quot;100&quot;</span> <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span> <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;Jupyter&#39;s NB_UID/NB_GID changed, need to update the Dockerfile&quot;</span>; <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #008000">exit</span> <span style="color: #666666">1</span>; <span style="color: #BB6622; font-weight: bold">\</span>
+    <span style="color: #008000; font-weight: bold">fi</span>
+
+<span style="color: #408080; font-style: italic"># Copy over the example as NB_USER. Unfortuantely we can&#39;t use $NB_UID/$NB_GID</span>
+<span style="color: #408080; font-style: italic"># in the `--chown` statement, so we need to hardcode these values.</span>
+COPY --chown<span style="color: #666666">=1000</span>:100 examples/ /home/<span style="color: #19177C">$NB_USER</span>/examples
+COPY prepare.sh /usr/bin/prepare.sh
+
+<span style="color: #008000; font-weight: bold">ENTRYPOINT</span><span style="color: #BA2121"> [&quot;tini&quot;, &quot;--&quot;, &quot;/usr/bin/prepare.sh&quot;]</span></code></pre>
 </div>
 </div>
 </div>

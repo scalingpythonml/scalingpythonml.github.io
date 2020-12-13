@@ -213,7 +213,7 @@ The link:$$https://github.com/dask/dask-docker$$[dask-docker] project contains a
 ====
 [source, dockerfile]
 ----
-include::../subrepos/dask-docker/notebook/Dockerfile
+include::../subrepos/dask-docker/notebook/Dockerfile[]
 ----
 ====
 
