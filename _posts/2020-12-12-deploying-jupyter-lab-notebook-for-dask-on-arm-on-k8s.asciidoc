@@ -88,7 +88,7 @@ With jconfigurable-http-proxy no changes are necessary to the project it's self,
 
 === Configuring the container images
 
-Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a [chart repository](https://v2.helm.sh/docs/chart_repository/) or you can use the existing published helm chart and override the images.
+Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link::$$https://v2.helm.sh/docs/chart_repository/$$[chart repository] or you can use the existing published helm chart and override the images.
 
 
 To install with the existing published chart you can run <<install_existing>>.
