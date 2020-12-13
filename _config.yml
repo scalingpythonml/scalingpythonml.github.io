@@ -16,14 +16,14 @@ twitter_username: holdenkarau
 youtube_username: holdenkarau
 
 # Set this to true to get LaTeX math equation support
-use_math:
+use_math: true
 
 # Add your Google Analytics ID here if you have one and want to use it
 google_analytics: UA-175499613-1
 
 # Everything below here can be ignored, unless you want to change the theme entirely
 theme: minima
-url: "https://scalingpythonml.com/"
+url: "https://scalingpythonml.com"
 plugins:
   - jekyll-feed
   - jekyll-gist
@@ -60,7 +60,7 @@ asciidoctor:
   - pygments-css=style
 
 site:
-  url: https://scalingpythonml.com/
+  url: https://scalingpythonml.com
 defaults:
   -
     scope:

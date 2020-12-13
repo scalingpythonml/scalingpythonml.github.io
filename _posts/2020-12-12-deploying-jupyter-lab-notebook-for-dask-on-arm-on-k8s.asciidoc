@@ -1,6 +1,6 @@
 = Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes
 
-In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
+In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the link:$$/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html$$[previous post, I got Dask on ARM on Kubernetes working], while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
 
 
 == Rebuilding the JupyterHub Containers
