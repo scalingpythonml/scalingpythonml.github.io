@@ -59,8 +59,6 @@ asciidoctor:
   - source-highlighter=pygments
   - pygments-css=style
 
-site:
-  url: https://scalingpythonml.com
 defaults:
   -
     scope:
