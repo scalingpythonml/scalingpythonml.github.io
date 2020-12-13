@@ -1,1 +1,1 @@
-Sitemap: /sitemap.xml
+Sitemap: https://scalingpythonml.com//sitemap.xml
