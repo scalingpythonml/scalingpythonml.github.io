@@ -1,0 +1,41 @@
+# This file can automatically be used to update requirements.txt with pinned
+# versions by running:
+#
+#    ./dependencies freeze --upgrade
+#
+
+# JupyterHub is pinned in chartpress.yaml, but need to be pinned here as well to
+# so our generated requirements.txt get proper comments set on it.
+jupyterhub==1.2.2
+
+## Authenticators
+jupyterhub-dummyauthenticator
+jupyterhub-firstuseauthenticator
+jupyterhub-hmacauthenticator
+jupyterhub-ldapauthenticator
+jupyterhub-ltiauthenticator
+jupyterhub-nativeauthenticator
+jupyterhub-tmpauthenticator
+nullauthenticator
+oauthenticator
+
+# Authenticator optional dependencies
+mwoauth
+pyjwt
+
+## Kubernetes spawner
+jupyterhub-kubespawner
+
+## Other optional dependencies for additional features
+pymysql  # mysql
+psycopg2-binary  # postgres
+pycurl  # internal http requests handle more load with pycurl
+statsd  # statsd metrics collection (TODO: remove soon, since folks use prometheus)
+
+# The idle culler service
+jupyterhub-idle-culler
+
+## Useful tools
+
+# py-spy is useful for profiling running hubs
+py-spy
