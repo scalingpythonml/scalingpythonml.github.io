@@ -51,13 +51,15 @@ show_excerpts: true
 header_pages:
   - about.md
   - mailinglist.md
-    
+
 asciidoctor:
   attributes:
   - idprefix=_
   - source-highlighter=pygments
   - pygments-css=style
 
+site:
+  url: https://scalingpythonml.com/
 defaults:
   -
     scope:
