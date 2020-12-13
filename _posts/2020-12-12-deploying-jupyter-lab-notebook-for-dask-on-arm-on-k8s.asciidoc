@@ -1,4 +1,6 @@
-    In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
+# Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes
+
+In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We'll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.
 
 
 ## Rebuilding the Containers
@@ -8,31 +10,37 @@
 [WARNING]
 
 ====
-
 One of Jupyter's containers uses cgo to build a small bootstrap program: this program will not build under QEMU. If you get an error building your containers check out my instructions on cross-building with real hosts. You can also cross-build without QEMU (discussed in the same post).
-
 ====
 
-JupyterLab uses a special program called [ChartPress](https://pypi.org/project/chartpress/) to build it's images. This program's compose building capabilities are similar to Docker's but are Python focused. To make ChartPress use Docker buildx, you'll want to clone the repo `git clone git@github.com:jupyterhub/chartpress.git` and replace the following line in chartpress.py
+JupyterLab uses a special program called link:$$https://pypi.org/project/chartpress/$$[ChartPress] to build it's images. This program's compose building capabilities are similar to Docker's but are Python focused. To make ChartPress use Docker buildx, you'll want to clone the repo `git clone git@github.com:jupyterhub/chartpress.git` and replace the following line in chartpress.py
 
+[source, diff]
+----
 -    cmd = ['docker', 'build', '-t', image_spec, context_path]
 
 +    cmd = ['docker', 'buildx', 'build', '-t', image_spec, context_path, "--platform", "linux/arm64,linux/amd64", "--push"]
+----
 
 Then you can pip install your local version:
 
 pip install -e .
 
-Now that you have ChartPress set up to cross-build for ARM64 and AMD64, you can check out [docker-stacks](https://github.com/jupyter/docker-stacks) and make a few changes. First is the base notebook container targets a specific non-cross platform hash, so we'll change the "FROM":
+Now that you have ChartPress set up to cross-build for ARM64 and AMD64, you can check out link:$$https://github.com/jupyter/docker-stacks$$[docker-stacks repo] and make a few changes. First is the base notebook container targets a specific non-cross platform hash, so we'll change the "FROM":
 
+[source, diff]
+----
 -ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4
 
 +#ARG ROOT_CONTAINER=ubuntu:focal-20200925@sha256:2e70e9c81838224b5311970dbf7ed16802fbfe19e7a70b3cbfa3d7522aa285b4
 
 +ARG ROOT_CONTAINER=ubuntu:focal
+----
 
 Next, is that Miniconda doesn't have full ARM64 support, so you'll want to swap the Miniconda install to Miniforge:
 
+[source, diff]
+----
 -RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh && \
 
 -    echo "${miniconda_checksum} *Miniconda3-py38_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
@@ -56,324 +64,174 @@ Next, is that Miniconda doesn't have full ARM64 support, so you'll want to swap 
 +    ./miniforge.sh -f -b -p $CONDA_DIR && \
 
 +    rm miniforge.sh && \
+----
 
-After that you can build with a custom image prefix:
+After that you can build with a custom image prefix as in <<ex_chartpress_build>>.
 
+[[ex_chartpress_build]]
+====
+[source, bash]
+----
 chartpress  --image-prefix holdenk/jupyter-hub-magic --force-build
+----
+====
 
-In addition to the docker-stack images you'll want to rebuild the zero-to-jupyterhub-k8s. Beyond rebuilding you'll also need to change images/singleuser-sample/Dockerfile and use the prefix docker-stack image you built. The py-spy package will also need to be removed from the images/hub/requirements.txt file since it is not cross-built (and it is optional anyway).
+In addition to the docker-stack images you'll want to rebuild the zero-to-jupyterhub-k8s and jconfigurable-http-proxy.
+
+With zero-to-jupyter-hub-k8s you'll also need to change images/singleuser-sample/Dockerfile and use the prefix docker-stack image you built. The py-spy package will also need to be removed from the images/hub/requirements.txt file since it is not cross-built (and it is optional anyway). zero-to-jupyterhub-k8s is also built with `chartpress`, so you will just re-run the same build as in <<ex_chartpress_build>>.
+
+
+
+With jconfigurable-http-proxy no changes are necessary to the project it's self, and you can directly run `docker buildx build -t holdenk/jconfigurable-http-proxy:0.0.1 .  --platform linux/arm64,linux/amd64 --push`. Note this is a different build command as the proxy project does not use chartpress.
+
+
+### Configuring the container images
+
+Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a [chart repository](https://v2.helm.sh/docs/chart_repository/) or you can use the existing published helm chart and override the images.
+
+
+To install with the existing published chart you can run <<install_existing>>.
+
+[[install_existing]]
+====
+[source, bash]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/install.sh[]
+----
+====
+
+
+To override the images, you'll need to specify the images in your configuration to helm when your doing your install later as in <<img-config>>. I put this in a file called `config.yaml`.
+
+[[img-config]]
+====
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-image-config.yaml[]
+----
+====
+
+
+We'll keep building on the above configuration, since we need to do more than just override the images.
+
+
 
 
 ## Setting up a SSL Certificate
 
-    Jupyter expects an SSL certificate for its endpoint. If you don't have cert manager installed, the guide at [https://opensource.com/article/20/3/ssl-letsencrypt-k3s](https://opensource.com/article/20/3/ssl-letsencrypt-k3s) shows how to configure SSL using Let's Encrypt. If you don't have a publicly accessible IP and domain, you'll want to use an alternative provider as well.
+Jupyter expects an SSL certificate for its endpoint. If you don't have cert manager installed, the guide at link:$$https://opensource.com/article/20/3/ssl-letsencrypt-k3s$$[https://opensource.com/article/20/3/ssl-letsencrypt-k3s shows how to configure SSL using Let's Encrypt]. If you don't have a publicly accessible IP and domain, you'll need to use an alternative provider. Once you have cert-manager installed it's time to request the certificate. The YAML for my certificate request for`holdenkarau.mooo.com` is shown in <<cert-req>>.
 
+[[cert-req]]
+====
+[source, yaml]
+----
+include::../subrepos/certificate-stuff/le-prod-cert.yaml[]
+----
+====
+
+Once you make your certificate request you can apply with `kubectl apply -f le-prod-cert.yaml`, and monitor it with `kubectl get certificates -n jhub -w -o yaml`. If your certificate does not become "Ready", you should check out the link:$$https://cert-manager.io/docs/faq/acme/$$[cert-manager debugging guide].
+
+
+Now that you've got your SSl certificate stored as a secret in your cluster, you'll need configure your JupyterHub ingress to use it by adding <<ingres-config>> to your `config.yaml`.
+
+[[ingress-config]]
+====
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=ssl_cert_config]
+----
+====
 
 ## Configure Traefik & Your Service
 
-    Since my home only has one public IP address, I changed the service type from LodeBalancer to NodePort, since I did not have a spare public IP to assign to Jupyter. My configuration file looks like:
+Since my home only has one public IP address, I changed the service type from LodeBalancer to NodePort, since I did not have a spare public IP to assign to Jupyter.
 
-hub:
 
-  image:
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=proxy_service]
+----
 
-    name: holdenk/jupyter-hub-magichub
+## Setting up Authentication
 
-proxy:
+I was unable to get the JupyterHub GitHub plugin working, but it looks like there is an link::$$https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871$$[outstanding issue to refactor the auth configuration], so for now I just hard coded what is known as "dummy" authentication. I recommend using a different kind of authentication as soon as the refactoring is complete.
 
-  service:
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-config-no-imgs.yaml[tags=auth]
+----
 
-    type: NodePort
-
-  secretToken: DIFFERENTSECRET
-
-  secretSync:
-
-    image:
-
-      name: holdenk/jupyter-hub-magicsecret-sync
-
-      tag: '0.10.2'
-
-  chp:
-
-    image:
-
-      name: holdenk/jconfigurable-http-proxy
-
-      tag: '0.0.1'
-
-ingress:
-
-  enabled: true
-
-  hosts:
-
-    - holdenkarau.mooo.com
-
-  tls:
-
-   - hosts:
-
-      - holdenkarau.mooo.com
-
-     secretName: k3s-mooo-tls
-
-singleuser:
-
-#  serviceAccountName: dask
-
-  networkTools:
-
-    image:
-
-      name: holdenk/jupyter-hub-magicnetwork-tools
-
-      tag: '0.10.2'
-
-  image:
-
-    name: holdenk/jupyter-hub-magicsingleuser-sample
-
-    tag: '0.10.2'
-
-  profileList:
-
-    - display_name: "Minimal environment"
-
-      description: "To avoid too much bells and whistles: Python."
-
-      default: true
-
-# Commented out for now, we'll uncomment this once we get it built.
-
-#    - display_name: "Dask container"
-
-#      description: "If you want to run dask"
-
-#      kubespawner_override:
-
-#        image: holdenk/dask-notebook:v0.9.4b
-
-prePuller:
-
-  hook:
-
-    image:
-
-      name: holdenk/jupyter-hub-magicimage-awaiter
-
-      tag: '0.10.2'
-
-# Do something better here! It's being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871
-
-auth:
-
-  type: dummy
-
-  dummy:
-
-    password: 'mypassword'
-
-  whitelist:
-
-    users:
-
-      - user1
-
-      - user2
+## Installing JupyterHub with Helm
 
 Now you can install this with Helm:
 
-RELEASE=jhub
+[source, bash]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/helm-install.sh[]
+----
 
-NAMESPACE=jhub
-
-helm install    $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2     --values config.yaml
 
 And now you're ready to rock and roll with JupyterHub! However, part of the config is still commented out; that's because we have not yet built the single user Dask Jupyter Docker container. If you aren't using Dask, this can be your stopping point.
 
 
 ## Adding Dask Support
 
-The default service account used will probably not have the right permissions to launch dask-distributed workers. You can create a service account for this:
+Adding Dask Support involves configuring permissions to make sure the notebook can create executors, building an image to work with your JupyterHub launcher, and adding the image to as a profile to your launcher.
 
-kubectl create serviceaccount -n jhub dask
+### Permissions
+The default service account used will probably not have the right permissions to launch dask-distributed workers.
+To start with create a specification for the what permission your notebook is going to need, I called my `setup.yaml` (not very creative I know) as in <<ex-perm-yaml>>
 
-Once you've made a service account you can create a cluster role and bind it to the dask namespace:
+[[ex-perm-yaml]]
+====
+[source, yaml]
+----
+include::../subrepos/scalingpythonml/dask-examples/setup.yaml[]
+----
+====
 
-kind: ClusterRole
+Now that you've specified the permissions you can go ahead and create the accounts, namespaces, and bindings to wire everything together as in <<ex-setup-namespace>>.
 
-apiVersion: rbac.authorization.k8s.io/v1beta1
+[[ex-setup-namespace]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/dask-examples/setup.sh[tags=setup_namespace]
+----
+====
 
-metadata:
+### Building container images
 
-  name: daskKubernetes
+The link::$$https://github.com/dask/dask-docker$$[dask-docker] project contains a notebook container file; however, it is not designed for use with JupyterHub's launcher. The first change needed is commenting out the auto start in `notebook/prepare.sh`. The other required change is swapping the Dockerfile with your cross-built  -- single-user-sample. I updated mine to also install some helpful libraries as in <<my_dask_nb_dockerfile>>:
 
-  namespace: dask
+[[my_dask_nb_dockerfile]]
+====
+[source, dockerfile]
+----
+include::../subrepos/dask-docker/notebook/Dockerfile
+----
+====
 
-rules:
+As before you can build this with the standard `docker buildx` commands.
 
-- apiGroups:
+### Configuring your Jupyter
 
-  - ""  # indicates the core API group
+To enable Dask with Jupyter you'll need to update your configuration to both specify the service account and add a profile for for the notebook container you've created. In my situation this looks like:
 
-  resources:
+Once your done with your config changes,  you need to update your install with `helm upgrade --cleanup-on-fail   --install $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2   --values config.yaml`
 
-  - "pods"
+## Conclusion
 
-  verbs:
+All in all my confiugration file looks something like <<my-total-config>> (except with diffferent secrets). Your config file will look a bit different depending on the choices you made while running through this config.
 
-  - "get"
+[[my-total-config]]
+====
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-config-dask.yaml[]
+----
+====
 
-  - "list"
 
-  - "watch"
 
-  - "create"
-
-  - "delete"
-
-- apiGroups:
-
-  - ""  # indicates the core API group
-
-  resources:
-
-  - "pods/log"
-
-  verbs:
-
-  - "get"
-
-  - "list"
-
-- apiGroups:
-
-  - "" # indicates the core API group
-
-  resources:
-
-  - "services"
-
-  verbs:
-
-  - "get"
-
-  - "list"
-
-  - "watch"
-
-  - "create"
-
-  - "delete"
-
-And then apply it with:
-
-kubectl create rolebinding dask-to-jupyter-binding --clusterrole=daskKubernetes --serviceaccount=jhub:dask --namespace dask
-
-The dask-docker project contains a notebook container file; however, it is not designed for use with JupyterHub's launcher. The first change needed is commenting out the auto start in notebook/prepare.sh. The other required change is swapping the Dockerfile with your cross-built  -- single-user-sample. I updated mine to also install some helpful libraries:
-
-FROM  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2
-
-USER root
-
-RUN apt-get update \
-
-    && apt-get install -yq graphviz git build-essential \
-
-    && apt-get clean \
-
-    && rm -rf /var/lib/apt/lists/*
-
-RUN touch /hello_holden
-
-USER $NB_USER
-
-RUN conda install -c conda-forge --yes mamba
-
-RUN mamba install --yes python==3.8.6
-
-RUN (mamba install --yes aiohttp==3.7.1 || pip install aiohttp==3.7.1 )
-
-RUN mamba install --yes \
-
-    python-blosc \
-
-    cytoolz \
-
-    dask==2.30.0 \
-
-    dask-core==2.30.0 \
-
-    lz4 \
-
-    numpy==1.19.2 \
-
-    ipywidgets \
-
-    python-graphviz && \
-
-    mamba install --yes s3fs gcsfs dropboxdrivefs requests dropbox paramiko adlfs pygit2 pyarrow && \
-
-    mamba install --yes bokeh numba llvmlite
-
-RUN (mamba install --yes fastparquet || pip install fastparquet)
-
-RUN (mamba install --yes jupyter-server-proxy || pip install jupyter-server-proxy)
-
-RUN (mamba install --yes dask-labextension==3.0.0 || pip install dask-labextension==3.0.0)
-
-RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager dask-labextension@3.0.0 @jupyterlab/server-proxy \
-
-    && jupyter serverextension enable dask-labextension@3.0.0 @jupyterlab/server-proxy \
-
-    && pip install dask-kubernetes==0.11.0 \
-
-    && jupyter lab clean \
-
-    && jlpm cache clean \
-
-    && npm cache clean --force \
-
-    && find /opt/conda/ -type f,l -name '*.a' -delete \
-
-    && find /opt/conda/ -type f,l -name '*.pyc' -delete \
-
-    && find /opt/conda/ -type f,l -name '*.js.map' -delete \
-
-    && find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name '*.js' -not -name '*.min.js' -delete || echo "no bokeh static files to cleanup" \
-
-    && rm -rf /opt/conda/pkgs
-
-USER root
-
-# Create the /opt/app directory, and assert that Jupyter's NB_UID/NB_GID values
-
-# haven't changed.
-
-RUN mkdir /opt/app \
-
-    && if [ "$NB_UID" != "1000" ] || [ "$NB_GID" != "100" ]; then \
-
-    echo "Jupyter's NB_UID/NB_GID changed, need to update the Dockerfile"; \
-
-    exit 1; \
-
-    fi
-
-# Copy over the example as NB_USER. Unfortuantely we can't use $NB_UID/$NB_GID
-
-# in the `--chown` statement, so we need to hardcode these values.
-
-COPY --chown=1000:100 examples/ /home/$NB_USER/examples
-
-COPY prepare.sh /usr/bin/prepare.sh
-
-ENTRYPOINT ["tini", "--", "/usr/bin/prepare.sh"]
-
-Once you build and push this you can enable the dask-docker image in your config and update your install with:
-
-helm upgrade --cleanup-on-fail   --install $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2   --values config.yaml
-
-Notes doc: [https://docs.google.com/document/d/1z7Ku1C6N3XRq4BBou__JGMF-7nlQfo0D8YtWx4_I5nk/edit](https://docs.google.com/document/d/1z7Ku1C6N3XRq4BBou__JGMF-7nlQfo0D8YtWx4_I5nk/edit)
+Now you're ready to rock-and-role with more stable Dask jobs, that can survive when your notebook goes to sleep or your home internet connection goes out between you and your cluster. The next blog post will explore how this is a bit more involved for building a JupyterHub launcher container for a Spark notebook.
