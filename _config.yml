@@ -23,6 +23,7 @@ google_analytics: UA-175499613-1
 
 # Everything below here can be ignored, unless you want to change the theme entirely
 theme: minima
+url: "https://scalingpythonml.com/"
 plugins:
   - jekyll-feed
   - jekyll-gist
