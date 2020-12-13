@@ -1,0 +1,55 @@
+hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+#tag::proxy_service[]
+proxy:
+  service:
+    type: NodePort
+  secretToken: DIFFERENTSECRET
+#end::proxy_service[]
+#tag::ssl_cert_config[]
+ingress:
+  enabled: true
+  hosts:
+    - holdenkarau.mooo.com
+  tls:
+   - hosts:
+      - holdenkarau.mooo.com
+     secretName: k3s-mooo-tls
+#end::ssl_cert_config[]
+#tag::enable_sa[]
+singleuser:
+  serviceAccountName: dask
+#end::enable_sa[]
+#tag::profiles[]
+  profileList:
+    - display_name: "Minimal environment"
+      description: "To avoid too much bells and whistles: Python."
+      default: true
+    - display_name: "Dask container"
+      description: "If you want to run dask"
+      kubespawner_override:
+        image: holdenk/dask-notebook:v0.9.4b
+#end::profiles[]
+#tag::spark_profile[]
+    - display_name: "Spark 3.0.1 container"
+      description: "If you want to run Spark"
+      kubespawner_override:
+        image: holdenk/spark-notebook:v3.0.1.1
+#end::spark_profile[]
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: '0.10.2'
+# Do something better here! It's being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871
+#tag::auth[]
+auth:
+  type: dummy
+  dummy:
+    password: 'mypassword'
+  whitelist:
+    users:
+      - user1
+      - user2
+#end::auth[]

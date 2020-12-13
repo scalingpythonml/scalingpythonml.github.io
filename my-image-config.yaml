@@ -1,0 +1,26 @@
+hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+proxy:
+  secretSync:
+    image:
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: '0.10.2'
+# This one needs to be override either way.
+  chp:
+    image:
+      name: holdenk/jconfigurable-http-proxy
+      tag: '0.0.1'
+singleuser:
+  networkTools:
+    image:
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: '0.10.2'
+  image:
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: '0.10.2'
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: '0.10.2'

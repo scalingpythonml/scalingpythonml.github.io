@@ -1,0 +1,54 @@
+hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+proxy:
+  service:
+    type: NodePort
+  secretToken: DIFFERENTSECRET
+  secretSync:
+    image:
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: '0.10.2'
+  chp:
+    image:
+      name: holdenk/jconfigurable-http-proxy
+      tag: '0.0.1'
+ingress:
+  enabled: true
+  hosts:
+    - holdenkarau.mooo.com
+  tls:
+   - hosts:
+      - holdenkarau.mooo.com
+     secretName: k3s-mooo-tls
+singleuser:
+  serviceAccountName: dask
+  networkTools:
+    image:
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: '0.10.2'
+  image:
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: '0.10.2'
+  profileList:
+    - display_name: "Minimal environment"
+      description: "To avoid too much bells and whistles: Python."
+      default: true
+    - display_name: "Dask container"
+      description: "If you want to run dask"
+      kubespawner_override:
+        image: holdenk/dask-notebook:v0.9.4b
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: '0.10.2'
+# Do something better here! It's being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871
+auth:
+  type: dummy
+  dummy:
+    password: 'mypassword'
+  whitelist:
+    users:
+      - user1
+      - user2

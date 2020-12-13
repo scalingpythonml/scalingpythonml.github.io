@@ -19,6 +19,7 @@ RUN apt-get update && \
       sqlite3 \
       curl \
       dnsutils \
+      libpq-dev \
       && \
     apt-get purge && apt-get clean
 
@@ -41,13 +42,13 @@ COPY requirements.txt /tmp/requirements.txt
 ARG JUPYTERHUB_VERSION=1.1.*
 
 RUN PYCURL_SSL_LIBRARY=openssl pip3 install --no-cache-dir \
-         -r /tmp/requirements.txt \
+	 -r /tmp/requirements.txt \
  && pip3 install --no-cache-dir \
-         $(bash -c 'if [[ $JUPYTERHUB_VERSION == "git"* ]]; then \
-            echo ${JUPYTERHUB_VERSION}; \
-          else \
-            echo jupyterhub==${JUPYTERHUB_VERSION}; \
-          fi')
+	 $(bash -c 'if [[ $JUPYTERHUB_VERSION == "git"* ]]; then \
+	    echo ${JUPYTERHUB_VERSION}; \
+	  else \
+	    echo jupyterhub==${JUPYTERHUB_VERSION}; \
+	  fi')
 
 WORKDIR /srv/jupyterhub
 

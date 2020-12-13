@@ -70,8 +70,8 @@ hub:
   extraVolumes: []
   extraVolumeMounts: []
   image:
-    name: jupyterhub/k8s-hub
-    tag: 'set-by-chartpress'
+    name: holdenk/jupyter-hub-magichub
+    tag: '0.10.2'
     pullPolicy: ''
     pullSecrets: []
   resources:
@@ -255,8 +255,8 @@ proxy:
       runAsGroup: 65534 # nobody group
       allowPrivilegeEscalation: false
     image:
-      name: jupyterhub/k8s-secret-sync
-      tag: 'set-by-chartpress'
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: '0.10.2'
       pullPolicy: ''
       pullSecrets: []
     resources: {}
@@ -319,8 +319,8 @@ singleuser:
     preferred: []
   networkTools:
     image:
-      name: jupyterhub/k8s-network-tools
-      tag: 'set-by-chartpress'
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: '0.10.2'
       pullPolicy: ''
       pullSecrets: []
   cloudMetadata:
@@ -372,8 +372,8 @@ singleuser:
       volumeNameTemplate: volume-{username}{servername}
       storageAccessModes: [ReadWriteOnce]
   image:
-    name: jupyterhub/k8s-singleuser-sample
-    tag: 'set-by-chartpress'
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: '0.10.2'
     pullPolicy: ''
     pullSecrets: []
   startTimeout: 300
@@ -479,8 +479,8 @@ prePuller:
     enabled: true
     # image and the configuration below relates to the hook-image-awaiter Job
     image:
-      name: jupyterhub/k8s-image-awaiter
-      tag: 'set-by-chartpress'
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: '0.10.2'
       pullPolicy: ''
       pullSecrets: []
     containerSecurityContext:

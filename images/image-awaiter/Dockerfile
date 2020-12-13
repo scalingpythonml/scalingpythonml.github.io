@@ -1,5 +1,7 @@
 # compile the code to an executable using an intermediary image
 FROM golang:1.15
+#FROM golang:1.15.3-buster
+#FROM golang:1.13
 
 RUN mkdir -p /build/
 COPY *.mod *.go *.sum /build/

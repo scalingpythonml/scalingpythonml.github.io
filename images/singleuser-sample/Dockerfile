@@ -1,4 +1,5 @@
-FROM jupyter/base-notebook:45bfe5a474fa
+#FROM jupyter/base-notebook:45bfe5a474fa
+FROM  holdenk/base-notebook:latest
 # Built from... https://hub.docker.com/r/jupyter/base-notebook/
 #               https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile
 # Built from... Ubuntu 18.04
@@ -9,6 +10,8 @@ FROM jupyter/base-notebook:45bfe5a474fa
 ## NOTE: This is a default and be overridden by chartpress using the
 ##       chartpress.yaml configuration
 ARG JUPYTERHUB_VERSION=1.1.*
+
+RUN ls
 
 # Example install of git and nbgitpuller.
 # NOTE: git is already available in the jupyter/minimal-notebook image.
