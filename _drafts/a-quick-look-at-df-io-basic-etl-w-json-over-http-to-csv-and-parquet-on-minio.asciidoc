@@ -13,61 +13,14 @@ Dask's file access layer uses https://github.com/intake/filesystem_spec[FSSPEC],
 
 [source, python]
 ----
-from fsspec.registry import known_implementations
-known_implementations
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=known_fs]
 ----
 
 In my case the known implementations returns:
 
 [source]
 ----
-{'file': {'class': 'fsspec.implementations.local.LocalFileSystem'},
- 'memory': {'class': 'fsspec.implementations.memory.MemoryFileSystem'},
- 'dropbox': {'class': 'dropboxdrivefs.DropboxDriveFileSystem',
-  'err': 'DropboxFileSystem requires "dropboxdrivefs","requests" and "dropbox" to be installed'},
- 'http': {'class': 'fsspec.implementations.http.HTTPFileSystem',
-  'err': 'HTTPFileSystem requires "requests" and "aiohttp" to be installed'},
- 'https': {'class': 'fsspec.implementations.http.HTTPFileSystem',
-  'err': 'HTTPFileSystem requires "requests" and "aiohttp" to be installed'},
- 'zip': {'class': 'fsspec.implementations.zip.ZipFileSystem'},
- 'gcs': {'class': 'gcsfs.GCSFileSystem',
-  'err': 'Please install gcsfs to access Google Storage'},
- 'gs': {'class': 'gcsfs.GCSFileSystem',
-  'err': 'Please install gcsfs to access Google Storage'},
- 'gdrive': {'class': 'gdrivefs.GoogleDriveFileSystem',
-  'err': 'Please install gdrivefs for access to Google Drive'},
- 'sftp': {'class': 'fsspec.implementations.sftp.SFTPFileSystem',
-  'err': 'SFTPFileSystem requires "paramiko" to be installed'},
- 'ssh': {'class': 'fsspec.implementations.sftp.SFTPFileSystem',
-  'err': 'SFTPFileSystem requires "paramiko" to be installed'},
- 'ftp': {'class': 'fsspec.implementations.ftp.FTPFileSystem'},
- 'hdfs': {'class': 'fsspec.implementations.hdfs.PyArrowHDFS',
-  'err': 'pyarrow and local java libraries required for HDFS'},
- 'webhdfs': {'class': 'fsspec.implementations.webhdfs.WebHDFS',
-  'err': 'webHDFS access requires "requests" to be installed'},
- 's3': {'class': 's3fs.S3FileSystem', 'err': 'Install s3fs to access S3'},
- 'adl': {'class': 'adlfs.AzureDatalakeFileSystem',
-  'err': 'Install adlfs to access Azure Datalake Gen1'},
- 'abfs': {'class': 'adlfs.AzureBlobFileSystem',
-  'err': 'Install adlfs to access Azure Datalake Gen2 and Azure Blob Storage'},
- 'az': {'class': 'adlfs.AzureBlobFileSystem',
-  'err': 'Install adlfs to access Azure Datalake Gen2 and Azure Blob Storage'},
- 'cached': {'class': 'fsspec.implementations.cached.CachingFileSystem'},
- 'blockcache': {'class': 'fsspec.implementations.cached.CachingFileSystem'},
- 'filecache': {'class': 'fsspec.implementations.cached.WholeFileCacheFileSystem'},
- 'simplecache': {'class': 'fsspec.implementations.cached.SimpleCacheFileSystem'},
- 'dask': {'class': 'fsspec.implementations.dask.DaskWorkerFileSystem',
-  'err': 'Install dask distributed to access worker file system'},
- 'github': {'class': 'fsspec.implementations.github.GithubFileSystem',
-  'err': 'Install the requests package to use the github FS'},
- 'git': {'class': 'fsspec.implementations.git.GitFileSystem',
-  'err': 'Install pygit2 to browse local git repos'},
- 'smb': {'class': 'fsspec.implementations.smb.SMBFileSystem',
-  'err': 'SMB requires "smbprotocol" or "smbprotocol[kerberos]" installed'},
- 'jupyter': {'class': 'fsspec.implementations.jupyter.JupyterFileSystem',
-  'err': 'Jupyter FS requires requests to be installed'},
- 'jlab': {'class': 'fsspec.implementations.jupyter.JupyterFileSystem',
-  'err': 'Jupyter FS requires requests to be installed'}}
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=known_fs_result]
 ----
 
 If you don't see your file system supported, there are a few options ranging from writing a new spec for FSSPEC, to using a FUSE filesystem layer, or copying the data to a support file system.
@@ -76,7 +29,7 @@ Since I'm focused on experimentation, I decided to install all of the extra pack
 
 [[ex_install_just_s3_http]]
 ====
-[source, python]
+[source, bash]
 ----
 pip install fsspec[s3] aiohttp
 ----
@@ -95,15 +48,7 @@ Since we're pulling our data over public http, we don't need special configurati
 ====
 [source, python]
 ----
-minio_storage_options = {
-    "key": "YOURACCESSKEY",
-    "secret": "YOURSECRETKEY",
-    "client_kwargs": {
-        "endpoint_url": "http://minio-1602984784.minio.svc.cluster.local:9000",
-        "region_name": 'us-east-1'
-    },
-    "config_kwargs": {"s3": {"signature_version": 's3v4'}},
-}
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=minio_storage_options]
 ----
 ====
 
@@ -131,30 +76,29 @@ To load the data we need to specify the files we want to load. On file systems t
 
 [source, python]
 ----
-gh_archive_files=[]
-while current_date < datetime.datetime.now() -  datetime.timedelta(days=1):
-    current_date = current_date + datetime.timedelta(hours=1)
-    datestring = f'{current_date.year}-{current_date.month:02}-{current_date.day:02}-{current_date.hour}'
-    gh_url = f'http://data.githubarchive.org/{datestring}.json.gz'
-    gh_archive_files.append(gh_url)
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=make_file_list]
 ----
 
 When I have a number of different inputs, I like to start with loading just the first file to explore the schema.
 
 [source, python]
 ----
-# Load the data for one day, loading all of the data is meeps
-mini_df = dd.read_json(gh_archive_files[0], compression='gzip')
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=load_data]
 ----
 
 After loading our initial input, calling "head" on the distributed DataFrame lets us see what's going on.
 
 [source, python]
 ----
-mini_df.head()
+df.head()
 ----
 
-ResultBlock
+Note the result of doing this (in IPython/Jupyter) is displayed using the normal pandas display logic, resulting in a nice image <<dfheadimg>>.
+
+[[dfheadimg]]
+image::../images/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio-df-head.png[Image of Dataframe display in the notebook]
+
+If you've called `df.head` in Spark, you'll note this is a much nicer default view. That being said the data needs a bit of cleaning up.
 
 === Some Quick Tidying Up
 
@@ -163,19 +107,7 @@ As we can see, there is nested JSON data in the DataFrame. I would like to parti
 
 [source, python]
 ----
-data_bag = df.to_bag()
-def clean_record(record):
-    r = {
-        "repo": record[cols.get_loc("repo")],
-        "repo_name": record[cols.get_loc("repo")]["name"],
-        "type": record[cols.get_loc("type")],
-        "id": record[cols.get_loc("id")],
-        "created_at": record[cols.get_loc("created_at")],
-        "payload": record[cols.get_loc("payload")]}
-    return r
-    
-cleaned_up_bag = data_bag.map(clean_record)
-res = cleaned_up_bag.to_dataframe()
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=cleaned_up]
 ----
 
 === Writes
@@ -185,15 +117,10 @@ The write side looks very similar to the read side, but we're going to use the m
 
 [source, python]
 ----
-# Partion the data so we can load data selectively downstream (manual in Dask I believe)
-df.to_parquet("s3://dask-test/gh/full-from-bag.pq",
-              partition_on=["type", "repo_name"],
-              compression="gzip",
-              storage_options=minio_storage_options,
-              engine="pyarrow")
+include::../subrepos/scalingpythonml/dask-examples/Dask\ -\ Explore\ S3MinIO.py[tags=write]
 ----
 
-Not all of  the Dask formats support partitioned writes. This means that some require the ability to bring all of the data back to either a single executor or the client Python process.
+Not all of  the Dask formats support partitioned writes. When a format does not support partition_on or other partioned writes, Dask will need to either all of the data back to either a single executor or the client Python process. This can cause failures with large datasets.
 
 === Compression
 
