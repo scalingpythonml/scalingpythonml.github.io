@@ -9,7 +9,11 @@ parser.add_argument('files', metavar='N', type=str, nargs='+',
 args = parser.parse_args()
 
 
-replacements = {r"\+(\Z|$)": '', "^== ":"= "}
+def move_up_one_level(m):
+    """asciidoc exporter exports at a weird level choice, move it up one"""
+    return m.group(1)+m.group(2)
+
+replacements = {r" \+(\Z|$)": '', "^(=+)=(\s+\w+)(\Z|$)": move_up_one_level}
 for filename in args.files:
     with open(filename) as infile, open(filename + "_", 'w') as outfile:
         for line in infile:
