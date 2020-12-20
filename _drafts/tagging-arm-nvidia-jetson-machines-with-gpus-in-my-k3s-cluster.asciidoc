@@ -1,19 +1,19 @@
-== Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster
+= Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster
 
 
 We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it's important to be able to request these resources from the Kubernetes scheduler. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I've got NVidia boards we'll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.
 
-=== Disabling un-needed checks
+== Disabling un-needed checks
 
 
 The Wind River folks havehttps://blogs.windriver.com/wind_river_blog/2020/06/nvidia-k8s-device-plugin-for-wind-river-linux/[ published a series of patches for NVidia] and instructions. You can apply these patches with
 
-patch -p1 < 0001-arm64-add-support-for-arm64-architectures.patch  +
+patch -p1 < 0001-arm64-add-support-for-arm64-architectures.patch 
 patch -p1 < 0002-nvidia-Add-support-for-tegra-boards.patch
 
 The third patch doesn't quite apply cleanly, as the loading NVML code has changed a bit (namely, failOnInitErrorFlag has been added). However, if you take a look at the patch, you can manually apply it by looking for the "log.Println("Loading NVML")" statement and replacing that chunk of code with the new code (indicated by the +s in the patch file).
 
-=== Building the arm image
+== Building the arm image
 
 
 Building the image with ARM support is now relatively simple. If you're running on an ARM machine you can just build as normal:
@@ -25,7 +25,7 @@ Otherwise, assuming you've set up cross-building, you can use buildx and just sp
 docker buildx build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 --platform linux/arm64 --push -f ./docker/arm64/Dockerfile.ubuntu16.04 .
 
 
-=== Building a multi-arch image
+== Building a multi-arch image
 
 
 If you have a mix of ARM and x86 machines in your cluster (as I do), having just an ARM image makes deployment a bit difficult. Thankfully we can update the Dockerfile to make it multi-arch by adding the `ARG TARGETARCH` and taking out the hardcoded arm64 references. For the `--platform=arm64` we can just go ahead and remove them, and for the wget, we can replace `arm64` with `${TARGETARCH}`.
@@ -34,12 +34,12 @@ Now, assuming you've got your multi-arch Docker build environment set up, you ca
 
 docker buildx build -t holdenk/k8s-device-plugin:v0.7.0.1 --platform linux/arm64,linux/amd64 --push -f ./docker/multi/Dockerfile.ubuntu16.04 .
 
-=== Updating the YAML & deploying.
+== Updating the YAML & deploying.
 
 
 Once you've built your container image, you'll need to update the image in `nvidia-device-plugin.yml` to point to your custom version. You can then deploy it with `kubectl apply -f nvidia-device-plugin.yml`.
 
-=== Conclusion
+== Conclusion
 
 
 Tagging your nodes with GPU resources is an important part of being able to take advantage of your cluster resources. While the NVidia tagger does not yet support Jetson boards out of the box, there are only a few small patches needed to get it working.
