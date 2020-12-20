@@ -11,7 +11,7 @@ args = parser.parse_args()
 
 replacements = {r"\+(\Z|$)": '', "^== ":"= "}
 for filename in args.files:
-    with open(filename) as infile, open(filename, 'w') as outfile:
+    with open(filename) as infile, open(filename + "_", 'w') as outfile:
         for line in infile:
             for src, target in replacements.items():
                 line = re.sub(src, target, line)
