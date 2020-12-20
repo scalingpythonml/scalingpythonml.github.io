@@ -21,7 +21,10 @@ To start with we'll download link:$$http://spark.apache.org/$$[Apache Spark] and
 .Download Spark
 [[dlspark]]
 ====
+[source, bash]
+----
 include::../subrepos/scalingpythonml/spark/containers/build.sh[tags=dlspark]
+----
 ====
 
 Now that we have Spark downloaded we can start customizing our `Dockerfiles`.
@@ -170,13 +173,19 @@ These port numbers are arbitrary (you can pick different ones), but you'll need 
 == Configuring Your JupyterHub Launcher
 
 
-Now that you have all of the foundational components set up, it's time to add them to your JupyterHub launcher. I did this by adding the following to my `config.yaml`:
+Now that you have all of the foundational components set up, it's time to add them to your JupyterHub launcher. I did this by adding the `Spark 3.0.1` option to the `profileList` in my `config.yaml` shown in <<my-jupyter-config>>.
 
-*CONFIG goes here*
+.Combined Spark and Dask Jupyter Config
+[[spark-jupyter-config]]
+====
+[source, yaml]
+----
+include::../subrepos/zero-to-jupyterhub-k8s/my-config.yaml[]
+----
+====
 
-You can then upgrade your previous deployment with the following helm command:
 
-*COMMAND goes here*
+You can then upgrade your previous deployment with `helm upgrade --cleanup-on-fail   --install $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2   --values config.yaml`.
 
 == Configuring Your SpakContext
 
@@ -205,10 +214,48 @@ include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[
 ----
 ====
 
+Since there are no pre-built docker images for Spark, you'll need to configure the container image used for the executor, mine is shown in <<configContainer>>.
+
+.Configure Container
+[[configContainer]]
+====
+[source, python]
+----
+include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[tags=configureContainer]
+----
+====
+
+
+
+Normally Spark assigns ports randomly for things like the driver and the block manager, but we need to configure Spark to bind to the correct ports, and also have the executors connect to the service we've created instead of trying to connect back to the hostname of the driver. My service configuration is shown in <<sparkNetConf>>.
+
+.Spark Network Conf
+[[sparkNetConf]]
+====
+[source, python]
+----
+include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[tags=configureService]
+----
+====
+
+In addition to that, you'll need to tell Spark which namespace it has permission to create executors in, shown in <<sparkNSConf>>.
+
+
+.Spark Namespace Conf
+[[sparkNSConf]]
+====
+[source, python]
+----
+include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[tags=configureNamespace]
+----
+====
+
+
+While it's not essential, configuring an application name makes debugging much easier. You can do this with `.set("spark.app.name", "PySparkHelloWorldInsideTheCluster")`.
 
 
 
 == Conclusion
 
 
-The process of adding a Spark notebook to your JupyterHub launcher is a little more involved than it is for typical notebooks because of the required permissions and network connections. Moving inside the cluster from outside of the cluster can offer many advantages, especially if your connection to the cluster goes over the internet. If you aren't familiar with Spark, there is a new version of _Learning Spark_ by my former co-workers (or you can buy the old one I co-wrote, but it's pretty out of date), along with Rachel & my _High Performance Spark_. Up next, I'm planning on deploying Ray on the cluster, then jumping back to Dask and with the GitHub and BitCoin data.
+The process of adding a Spark notebook to your JupyterHub launcher is a little more involved than it is for typical notebooks because of the required permissions and network connections. Moving inside the cluster from outside of the cluster can offer many advantages, especially if your connection to the cluster goes over the internet. If you aren't familiar with Spark, there is a new version of link:$$https://amzn.to/2WxB1I1$$[_Learning Spark_] by my former co-workers (or you can buy the link:$$https://amzn.to/2Ww3s98$$[old one I co-wrote], but it's pretty out of date), along with Rachel & my link:$$https://amzn.to/3paoE0L$$[_High Performance Spark_]. Up next, I'm planning on deploying Ray on the cluster, then jumping back to Dask and with the GitHub and BitCoin data.
