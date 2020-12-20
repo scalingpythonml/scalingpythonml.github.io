@@ -21,7 +21,7 @@ To start with we'll download link:$$http://spark.apache.org/$$[Apache Spark] and
 .Download Spark
 [[dlspark]]
 ====
-include::../subrepos/scalingpythonml/spark/containers/[tags=dlspark]
+include::../subrepos/scalingpythonml/spark/containers/build.sh[tags=dlspark]
 ====
 
 Now that we have Spark downloaded we can start customizing our `Dockerfiles`.
@@ -52,7 +52,7 @@ Since the Dockerfile copies parts of Spark in, remember to save it at the root o
 If you're not cross building, you can build this with a regular `docker build`, in my case since I'm targetting arm and x86 I did built it as shown in <<build_spark_nb>>.
 
 .Build Spark notebook container
-[[build_spark_nb]
+[[build_spark_nb]]
 ====
 [source, bash]
 ----
@@ -94,7 +94,7 @@ include::../subrepos/scalingpythonml/spark/containers/python-executor/Dockerfile
 You'll see this file references `pysetup.sh` which installs Python using Miniforge so we can support arm as shown in <<pysetupsh>>.
 
 .Setup python
-[[spark_exec_dockerfile]]
+[[pysetupsh]]
 ====
 [source, bash]
 ----
@@ -127,16 +127,43 @@ Some parts of Spark may assume a specific layout of the container, e.g. in Spark
 == Setting up Kubernetes Permissions
 
 
-The driver program needs the ability to launch new pods for executors. To allow launching, create a service account or give permissions to the default service account. In my case, I decided to add permissions to the "dask" service account since the JupyterHub launcher (covered later) doesn't support different service accounts depending on the notebook. I also created a special "spark" namespace to make it easier to watch what was happening.
+The driver program needs the ability to launch new pods for executors. To allow launching, create a service account or give permissions to the default service account (SA) . In my case, I decided to add permissions to the "dask" service account since the JupyterHub launcher (covered later) doesn't support different service accounts depending on the notebook. I also created a special "spark" namespace to make it easier to watch what was happening. My namespace and SA setup is shown in <<setupsa>>.
 
-*COMMAND goes here*
+
+.Setup up namespace and service account
+[[setupsa]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/setup_notebook.sh[tags=setupsa]
+----
+====
+
 
 == Creating a Service (Allowing Driver-Executor Communication)
 
 
 Spark depends on the executors connecting back to the driver for both the driver its self and the driver's BlockManager. If your driver is in a different namespace, the easiest way to allow communication is to create a service to let the executors connect to the driver.
 
-*CONFIG goes here*
+.The Spark Driver Service
+[[drvier_svc]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/driver-service.yaml[]
+----
+====
+
+
+.Apply the Spark Driver Service
+[[drvier_svc_apply]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/setup_notebook.sh[tags=setup_service]
+----
+====
+
 
 These port numbers are arbitrary (you can pick different ones), but you'll need to remember them when configuring your SparkContext.
 
@@ -154,13 +181,31 @@ You can then upgrade your previous deployment with the following helm command:
 == Configuring Your SpakContext
 
 
-Now that you can launch a notebook with everything needed for Spark, it's time to talk about configuring your SparkContext to work in this environment. You'll need more configuration than you can get through the SparkContext constructor directly, so you will also need to import the SparkConf. Your imports might look like:
+Now that you can launch a notebook with everything needed for Spark, it's time to talk about configuring your SparkContext to work in this environment. You'll need more configuration than you can get through the SparkContext constructor directly, so you will also need to import the SparkConf. Your imports might look like <<sparkImports>>.
 
-*IMPORT goes here*
+.Spark Imports
+[[sparkImports]]
+====
+[source, python]
+----
+include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[tags=sparkImports]
+----
+====
 
-In my cluster, the K8s API is available at [blah], so I start my configuration with:
 
-*CONFIG goes here*
+
+In my cluster, the K8s API is available at `https://kubernetes.default`, so I start my configuration as in <<makeSparkConf>>.
+
+.Start of Spark Conf
+[[makeSparkConf]]
+====
+[source, python]
+----
+include::../subrepos/scalingpythonml/spark/PySparkHelloWorldInsideTheCluster.py[tags=makeSparkConf]
+----
+====
+
+
 
 
 == Conclusion
