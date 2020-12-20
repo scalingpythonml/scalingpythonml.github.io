@@ -15,6 +15,17 @@ It may seem like there are extra steps here compared to dask-kubernetes. Dask-ku
 
 We need two containers, one with Jupyter and Spark installed together and another with just Spark. Since we're working in Python, there are some extra Python libraries we want to install as well (PyArrow, pandas, etc.) If you've got a specific version of a library that your project depends on, you'll want to add it to both the Jupyter Spark driver container and the executor containers.
 
+
+To start with we'll download link:$$http://spark.apache.org/$$[Apache Spark] and decompress it, as shown in <<dlspark>>, so that we can copy the desired parts inside our containers.
+
+.Download Spark
+[[dlspark]]
+====
+include::../subrepos/scalingpythonml/spark/containers/[tags=dlspark]
+====
+
+Now that we have Spark downloaded we can start customizing our `Dockerfiles`.
+
 === Building the Jupyter Spark Container
 
 
@@ -26,6 +37,7 @@ In my case I've custom built the link:$$https://github.com/jupyterhub/zero-to-ju
 
 Since Spark needs Java to run, I decided to look at the link:$$https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile$$[jdk11 slim dockerfile] to see how to install Java in a dockerfile well. If you're an object-oriented person, you might be wishing we had multiple-inheritence with Dockerfiles, but that doesn't work. In addition to the JDK11 dockerfile, I looked at Spark's own Dockerfiles (includign PySpark) and the resulting Juptyer Spark Container specification is shown in <<spark_notebook_dockerfile>>.
 
+.Dockerfile to add Spark on top of the Jupyter Notebook container.
 [[spark_notebook_dockerfile]]
 ====
 [source, dockerfile]
@@ -34,7 +46,19 @@ include::../subrepos/scalingpythonml/spark/containers/notebook/Dockerfile[]
 ----
 ====
 
+Since the Dockerfile copies parts of Spark in, remember to save it at the root of where you decompressed the Spark tarball.
 
+
+If you're not cross building, you can build this with a regular `docker build`, in my case since I'm targetting arm and x86 I did built it as shown in <<build_spark_nb>>.
+
+.Build Spark notebook container
+[[build_spark_nb]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/containers/build.sh[tags=build-notebook]
+----
+====
 
 
 [NOTE]
@@ -42,20 +66,63 @@ include::../subrepos/scalingpythonml/spark/containers/notebook/Dockerfile[]
 An alternative would have been to take the JDK-11 containers as a starting point, and install Jupyter on top of it, but when I tried that I found it more complicated.
 ====
 
+This gives us a container with both Spark and the base notebook layer together. For the executors, we don't want to bother shipping Jupyter, so we'll build a seperate container for the executors.
+
 === Building the Executor Container
 
 
 Spark does not ship pre-built containers for its executors, so regardless of which arch you’re using, you will need to build the executor containers.
 
-If you're building multi-arch containers, you will need to update Spark's docker image tool. You will need to change the buildx option to push the images by adding "--push" to the docker buildx commands in the script for ./bin/docker-image-tool.sh. My diff looks like:
 
-*diff goes here*
+If you're building multi-arch containers, you will need to update Spark's docker image tool. You will need to change the buildx option to push the images by adding "--push" to the docker buildx commands in the script for ./bin/docker-image-tool.sh.
 
-Spark's Python container Dockerfile installs an older version of Python without any dependencies, so you will want to customize your Python container setup, as well. My Dockerfile looks like:
 
-*Dockerfile goes here*
 
-You will want to make your Dockerfile install the dependencies for your program while making sure to select the same version of Python that you have in your Jupyter container.
+Spark's Python container Dockerfile installs an older version of Python without any dependencies, so you will want to customize your Python container setup, as well. My Dockerfile is shown in <<spark_exec_dockerfile>>.
+
+
+
+.Dockerfile customizing PySpark setup
+[[spark_exec_dockerfile]]
+====
+[source, dockerfile]
+----
+include::../subrepos/scalingpythonml/spark/containers/python-executor/Dockerfile[]
+----
+====
+
+You'll see this file references `pysetup.sh` which installs Python using Miniforge so we can support arm as shown in <<pysetupsh>>.
+
+.Setup python
+[[spark_exec_dockerfile]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/containers/pysetup.sh[]
+----
+====
+
+You will want to make your Dockerfile install the dependencies for your program while making sure to select the same version of Python that you have in your Jupyter container, so you may need to modify those two examples.
+
+
+Once you've configured your enviroment, you can build your Spark image using the `docker-image-tool` that ships with Spark as shown in <<build_exec_containers>>.
+
+
+.Build the exec containers
+[[build_exec_contianers]]
+====
+[source, bash]
+----
+include::../subrepos/scalingpythonml/spark/containers/build.sh[tags=build_exec_containers]
+----
+====
+
+
+
+[WARNING]
+====
+Some parts of Spark may assume a specific layout of the container, e.g. in Spark 3.1 the decommissioning integration makes certain assumptions, so be careful when making changes.
+====
 
 == Setting up Kubernetes Permissions
 
