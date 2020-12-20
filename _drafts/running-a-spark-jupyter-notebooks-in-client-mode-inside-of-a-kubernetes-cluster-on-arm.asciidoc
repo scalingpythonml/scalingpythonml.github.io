@@ -6,9 +6,9 @@ Having your Spark Notebook inside the same cluster as the executors can reduce n
 To get a Spark notebook working inside of the cluster, we need to set up a few different things. The first step, similar to dask-kubernetes, is building a container with Jupyter and Spark installed. We also need to make a container of Spark for the executors. In addition to the containers, we need to set up permissions on the cluster and ensure that the executors that your Spark driver will launch have a way to talk to the driver in the notebook.
 
 [NOTE]
-===
+====
 It may seem like there are extra steps here compared to dask-kubernetes. Dask-kubernetes automates some service creation, which allows for communication between the scheduler, executors, and the notebook.
-===
+====
 
 == Building the Containers
 
@@ -18,9 +18,29 @@ We need two containers, one with Jupyter and Spark installed together and anothe
 === Building the Jupyter Spark Container
 
 
-The easiest way to build a Jupyter Spark container is to install Spark on top of the base Jupyter container. If you're running on ARM, you'll need to first cross-build the base Jupyter container (see my instructions in the previous post).
+The easiest way to build a Jupyter Spark container is to install Spark on top of the base Jupyter container. If you're running on ARM, you'll need to first cross-build the base Jupyter container (see my link:$$https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html$$[instructions in the previous post]).
 
-*Command goes here*
+
+In my case I've custom built the link:$$https://github.com/jupyterhub/zero-to-jupyterhub-k8s/tree/master/images/singleuser-sample$$[single-user sample Docker container] from zero-to-jupyterhub-k8s to `holdenk/jupyter-hub-magicsingleuser-sample:0.10.2` as I needed ARM support. If you don't need to cross-build your custom container, you can use the pre-built container at `jupyterhub/k8s-singleuser-sample` as the basis for yours.
+
+
+Since Spark needs Java to run, I decided to look at the link:$$https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile$$[jdk11 slim dockerfile] to see how to install Java in a dockerfile well. If you're an object-oriented person, you might be wishing we had multiple-inheritence with Dockerfiles, but that doesn't work. In addition to the JDK11 dockerfile, I looked at Spark's own Dockerfiles (includign PySpark) and the resulting Juptyer Spark Container specification is shown in <<spark_notebook_dockerfile>>.
+
+[[spark_notebook_dockerfile]]
+====
+[source, dockerfile]
+----
+include::../subrepos/scalingpythonml/spark/containers/notebook/Dockerfile[]
+----
+====
+
+
+
+
+[NOTE]
+====
+An alternative would have been to take the JDK-11 containers as a starting point, and install Jupyter on top of it, but when I tried that I found it more complicated.
+====
 
 === Building the Executor Container
 
