@@ -1,28 +1,28 @@
-= Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)
+== Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)
 
 
-Having your Spark Notebook inside the same cluster as the executors can reduce network errors, and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you've already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven't.
+Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you've already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven't.
 
-To get a Spark notebook working inside of the cluster, we need to set up a few different things. The first step, which is similar with dask-kubernetes, is building a container with both Jupyter and Spark installed as well as a container for the executors. In addition to that, we also need to set up permissions on the cluster and ensure that the executors that your Spark driver will launch have a way to talk to the driver in the notebook.
+To get a Spark notebook working inside of the cluster, we need to set up a few different things. The first step, similar to dask-kubernetes, is building a container with Jupyter and Spark installed. We also need to make a container of Spark for the executors. In addition to the containers, we need to set up permissions on the cluster and ensure that the executors that your Spark driver will launch have a way to talk to the driver in the notebook.
 
-[NOTE]
-===
-It may seem like there are extra steps here compared to dask-kubernetes. Dask-kubernetes automates some of the service creation, which allows for communication between the scheduler, executors, and the notebook
-===
+[NOTE] +
+==== +
+It may seem like there are extra steps here compared to dask-kubernetes. Dask-kubernetes automates some service creation, which allows for communication between the scheduler, executors, and the notebook. +
+====
 
-== Building the Containers
-
-
-We need two containers, one with Jupyter and Spark installed together and another with just Spark. Since we're working in Python, there are some extra Python libraries we want to install as well (PyArrow, pandas, etc.) If you've got a specific version of a library that your project depends on you'll want to add it to both the Jupyter Spark driver container and the executor containers.
-
-=== Building the Jupyter Spark Container
+=== Building the Containers
 
 
-The easiest way to build a Jupyter Spark container is to install Spark on top of the base Jupyter container. If you're running on ARM you'll need to first cross-build the base Jupyter container (see my instructions in the previous post).
+We need two containers, one with Jupyter and Spark installed together and another with just Spark. Since we're working in Python, there are some extra Python libraries we want to install as well (PyArrow, pandas, etc.) If you've got a specific version of a library that your project depends on, you'll want to add it to both the Jupyter Spark driver container and the executor containers.
+
+==== Building the Jupyter Spark Container
+
+
+The easiest way to build a Jupyter Spark container is to install Spark on top of the base Jupyter container. If you're running on ARM, you'll need to first cross-build the base Jupyter container (see my instructions in the previous post).
 
 *Command goes here*
 
-=== Building the Executor Container
+==== Building the Executor Container
 
 
 Spark does not ship pre-built containers for its executors, so regardless of which arch you’re using, you will need to build the executor containers.
@@ -37,26 +37,26 @@ Spark's Python container Dockerfile installs an older version of Python without 
 
 You will want to make your Dockerfile install the dependencies for your program while making sure to select the same version of Python that you have in your Jupyter container.
 
-== Setting up Kubernetes Permissions
+=== Setting up Kubernetes Permissions
 
 
-The driver program needs the ability to launch new pods for executors. To do this create a service account or give permissions to the default service account. In my case I decided to add permissions to the "dask" service account since the JupyterHub launcher (covered later) doesn't support different service accounts for different notebooks. I also created a special "spark" namespace to make it easier to watch what was happening.
+The driver program needs the ability to launch new pods for executors. To allow launching, create a service account or give permissions to the default service account. In my case, I decided to add permissions to the "dask" service account since the JupyterHub launcher (covered later) doesn't support different service accounts depending on the notebook. I also created a special "spark" namespace to make it easier to watch what was happening.
 
 *COMMAND goes here*
 
-== Creating a Service (Allowing Driver-Executor Communication)
+=== Creating a Service (Allowing Driver-Executor Communication)
 
 
-Spark depends on the executors being able to connect back to the driver for both the driver its self and the driver's BlockManager. If your driver is in a different namespace, the easiest way to allow communication is to create a service to allow the executors to connect back to the driver.
+Spark depends on the executors connecting back to the driver for both the driver its self and the driver's BlockManager. If your driver is in a different namespace, the easiest way to allow communication is to create a service to let the executors connect to the driver.
 
 *CONFIG goes here*
 
-These port numbers are arbitrary (you can pick different ones), but you'll need to remember them when you are configuring your SparkContext.
+These port numbers are arbitrary (you can pick different ones), but you'll need to remember them when configuring your SparkContext.
 
-== Configuring Your JupyterHub Launcher
+=== Configuring Your JupyterHub Launcher
 
 
-Now that you have all of the foundational components set up, it's time to add them to your JupyterHub launcher. I did this by adding the following to my config.yaml:
+Now that you have all of the foundational components set up, it's time to add them to your JupyterHub launcher. I did this by adding the following to my `config.yaml`:
 
 *CONFIG goes here*
 
@@ -64,19 +64,19 @@ You can then upgrade your previous deployment with the following helm command:
 
 *COMMAND goes here*
 
-== Configuring Your SpakContext
+=== Configuring Your SpakContext
 
 
-Now that you can launch a notebook with everything needed for Spark, it's time to talk about how to configure your SparkContext to work in this environment. You'll need more configuration than you can get through the SparkContext constructor directly, so you will also need to import the SparkConf. Your imports might look like:
+Now that you can launch a notebook with everything needed for Spark, it's time to talk about configuring your SparkContext to work in this environment. You'll need more configuration than you can get through the SparkContext constructor directly, so you will also need to import the SparkConf. Your imports might look like:
 
 *IMPORT goes here*
 
-In my cluster, the K8s API is available at [blah] so I start off my configuration with:
+In my cluster, the K8s API is available at [blah], so I start my configuration with:
 
 *CONFIG goes here*
 
 
-== Conclusion
+=== Conclusion
 
 
-The process of adding a Spark notebook to your JupyterHub launcher is a little more involved than it is for common notebooks because of the required permissions and network connections. Moving inside the cluster from outside of the cluster can offer many advantages, especially if your connection to the cluster goes over the internet. If you aren't familiar with Spark, there is a new version of _Learning Spark_ by my former co-workers (or you can buy the old one I co-wrote, but it's pretty out of date), along with Rachel & my _High Performance Spark_. Up next, I'm planning on deploying Ray on the cluster, exploring another new tool, then jumping back to Dask and working on exploring GitHub and BitCoin data.
+The process of adding a Spark notebook to your JupyterHub launcher is a little more involved than it is for typical notebooks because of the required permissions and network connections. Moving inside the cluster from outside of the cluster can offer many advantages, especially if your connection to the cluster goes over the internet. If you aren't familiar with Spark, there is a new version of _Learning Spark_ by my former co-workers (or you can buy the old one I co-wrote, but it's pretty out of date), along with Rachel & my _High Performance Spark_. Up next, I'm planning on deploying Ray on the cluster, then jumping back to Dask and with the GitHub and BitCoin data.
