@@ -1,9 +1,21 @@
 = Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)
 
 
-Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you've already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven't.
+Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you've already set up the foundation JupyterHub inside of Kubernetes deployment; link:$$https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html$$[the Dask-distributed notebook blog post covers that if you haven't].
+
+
+I like to think of this as washing my dog (Timbit) is a lot easier inside of the bath-tun than trying to wash him outside. Although it can take a bit of work to get him inside the tub <<timbit-tub-img>>.
+
+[[timbit-tub-img]]
+image::../images/timbit-in-the-tub-IMG_0589.jpg[Timbit in the bath tub]
+
+
+If you're interested my link:$$https://www.youtube.com/watch?v=a7hDZxisuAk&list=PLRLebp9QyZtapJnz4cpDctnQ1i_qUmeap&index=1$$[YouTube playlist of Get Spark Working with Notebook inside my Kubernetes (K8s/K3s) ARM cluster ] shows the journey I went on to get this working.
+A lot of my blog posts come out of my link:$$https://www.youtube.com/user/holdenkarau$$[Open Source Live Streams] (which even include Timbit sometimes).
+
 
 To get a Spark notebook working inside of the cluster, we need to set up a few different things. The first step, similar to dask-kubernetes, is building a container with Jupyter and Spark installed. We also need to make a container of Spark for the executors. In addition to the containers, we need to set up permissions on the cluster and ensure that the executors that your Spark driver will launch have a way to talk to the driver in the notebook.
+
 
 [NOTE]
 ====
