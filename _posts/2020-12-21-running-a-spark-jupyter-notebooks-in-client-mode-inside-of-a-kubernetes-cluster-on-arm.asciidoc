@@ -7,7 +7,7 @@ Having your Spark Notebook inside the same cluster as the executors can reduce n
 I like to think of this as washing my dog (Timbit) is a lot easier inside of the bath-tun than trying to wash him outside. Although it can take a bit of work to get him inside the tub <<timbit-tub-img>>.
 
 [[timbit-tub-img]]
-image::../images/timbit-in-the-tub-IMG_0589.jpg[Timbit in the bath tub]
+image::/images/timbit-in-the-tub-IMG_0589.jpg[Timbit in the bath tub]
 
 
 If you're interested my link:$$https://www.youtube.com/watch?v=a7hDZxisuAk&list=PLRLebp9QyZtapJnz4cpDctnQ1i_qUmeap&index=1$$[YouTube playlist of Get Spark Working with Notebook inside my Kubernetes (K8s/K3s) ARM cluster ] shows the journey I went on to get this working.
