@@ -1,4 +1,656 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2020-12-12T22:28:28-08:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes</title><link href="https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes" /><published>2020-12-12T00:00:00-08:00</published><updated>2020-12-12T00:00:00-08:00</updated><id>https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s</id><content type="html" xml:base="https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2020-12-21T13:23:59-08:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)</title><link href="https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html" rel="alternate" type="text/html" title="Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)" /><published>2020-12-21T00:00:00-08:00</published><updated>2020-12-21T00:00:00-08:00</updated><id>https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm</id><content type="html" xml:base="https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html">&lt;div id=&quot;preamble&quot;&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&amp;#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; &lt;a href=&quot;https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html&quot;&gt;the Dask-distributed notebook blog post covers that if you haven&amp;#8217;t&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;I like to think of this as washing my dog (Timbit) is a lot easier inside of the bath-tun than trying to wash him outside. Although it can take a bit of work to get him inside the tub &lt;a href=&quot;#timbit-tub-img&quot;&gt;[timbit-tub-img]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;timbit-tub-img&quot; class=&quot;imageblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;img src=&quot;../images/timbit-in-the-tub-IMG_0589.jpg&quot; alt=&quot;Timbit in the bath tub&quot;&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you&amp;#8217;re interested my &lt;a href=&quot;https://www.youtube.com/watch?v=a7hDZxisuAk&amp;amp;list=PLRLebp9QyZtapJnz4cpDctnQ1i_qUmeap&amp;amp;index=1&quot;&gt;YouTube playlist of Get Spark Working with Notebook inside my Kubernetes (K8s/K3s) ARM cluster &lt;/a&gt; shows the journey I went on to get this working.
+A lot of my blog posts come out of my &lt;a href=&quot;https://www.youtube.com/user/holdenkarau&quot;&gt;Open Source Live Streams&lt;/a&gt; (which even include Timbit sometimes).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To get a Spark notebook working inside of the cluster, we need to set up a few different things. The first step, similar to dask-kubernetes, is building a container with Jupyter and Spark installed. We also need to make a container of Spark for the executors. In addition to the containers, we need to set up permissions on the cluster and ensure that the executors that your Spark driver will launch have a way to talk to the driver in the notebook.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;admonitionblock note&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td class=&quot;icon&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Note&lt;/div&gt;
+&lt;/td&gt;
+&lt;td class=&quot;content&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;It may seem like there are extra steps here compared to dask-kubernetes. Dask-kubernetes automates some service creation, which allows for communication between the scheduler, executors, and the notebook.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_building-the-containers&quot;&gt;Building the Containers&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We need two containers, one with Jupyter and Spark installed together and another with just Spark. Since we&amp;#8217;re working in Python, there are some extra Python libraries we want to install as well (PyArrow, pandas, etc.) If you&amp;#8217;ve got a specific version of a library that your project depends on, you&amp;#8217;ll want to add it to both the Jupyter Spark driver container and the executor containers.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To start with we&amp;#8217;ll download &lt;a href=&quot;http://spark.apache.org/&quot;&gt;Apache Spark&lt;/a&gt; and decompress it, as shown in &lt;a href=&quot;#dlspark&quot;&gt;Download Spark&lt;/a&gt;, so that we can copy the desired parts inside our containers.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;dlspark&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 1. Download Spark&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;if&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; ! -f spark-3.0.1-bin-hadoop3.2.tgz &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;then&lt;/span&gt;
+  axel https://ftp.wayne.edu/apache/spark/spark-3.0.1/spark-3.0.1-bin-hadoop3.2.tgz
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;fi&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;if&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; ! -d spark-3.0.1-bin-hadoop3.2 &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;then&lt;/span&gt;
+  tar -xvf spark-3.0.1-bin-hadoop3.2.tgz
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;fi&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that we have Spark downloaded we can start customizing our &lt;code&gt;Dockerfiles&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_building-the-jupyter-spark-container&quot;&gt;Building the Jupyter Spark Container&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The easiest way to build a Jupyter Spark container is to install Spark on top of the base Jupyter container. If you&amp;#8217;re running on ARM, you&amp;#8217;ll need to first cross-build the base Jupyter container (see my &lt;a href=&quot;https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html&quot;&gt;instructions in the previous post&lt;/a&gt;).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In my case I&amp;#8217;ve custom built the &lt;a href=&quot;https://github.com/jupyterhub/zero-to-jupyterhub-k8s/tree/master/images/singleuser-sample&quot;&gt;single-user sample Docker container&lt;/a&gt; from zero-to-jupyterhub-k8s to &lt;code&gt;holdenk/jupyter-hub-magicsingleuser-sample:0.10.2&lt;/code&gt; as I needed ARM support. If you don&amp;#8217;t need to cross-build your custom container, you can use the pre-built container at &lt;code&gt;jupyterhub/k8s-singleuser-sample&lt;/code&gt; as the basis for yours.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Since Spark needs Java to run, I decided to look at the &lt;a href=&quot;https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile&quot;&gt;jdk11 slim dockerfile&lt;/a&gt; to see how to install Java in a dockerfile well. If you&amp;#8217;re an object-oriented person, you might be wishing we had multiple-inheritence with Dockerfiles, but that doesn&amp;#8217;t work. In addition to the JDK11 dockerfile, I looked at Spark&amp;#8217;s own Dockerfiles (includign PySpark) and the resulting Juptyer Spark Container specification is shown in &lt;a href=&quot;#spark_notebook_dockerfile&quot;&gt;Dockerfile to add Spark on top of the Jupyter Notebook container.&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;spark_notebook_dockerfile&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 2. Dockerfile to add Spark on top of the Jupyter Notebook container.&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Switch to root to install stuff&lt;/span&gt;
+USER root
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Use multiple cores to compile the C code :)&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; MAKEFLAGS -j 4&lt;/span&gt;
+
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -eux; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get update &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get install -yq graphviz git build-essential cmake telnet &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    ln -s /lib /lib64 &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt install -y bash tini libc6 libpam-modules krb5-user libnss3 procps ca-certificates p11-kit wget bzip2 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mkdir -p /opt/spark &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mkdir -p /opt/spark/examples &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mkdir -p /opt/spark/work-dir &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    touch /opt/spark/RELEASE &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    rm /bin/sh &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    ln -sv /bin/bash /bin/sh &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;auth required pam_wheel.so use_uid&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; /etc/pam.d/su &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    chgrp root /etc/passwd &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; chmod ug+rw /etc/passwd &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    conda install -c conda-forge --yes mamba &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;python&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==3&lt;/span&gt;.8.6 &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    pip install --upgrade pip setuptools &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;numpy&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==1&lt;/span&gt;.19.2 pandas cytoolz numba lz4 scikit-build python-blosc&lt;span style=&quot;color: #666666&quot;&gt;=1&lt;/span&gt;.9.2 &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes pyarrow &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt;  pip install -vvv pyarrow&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get clean &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    rm -rf /var/cache/apt/* &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    rm -rf /var/lib/apt/lists/* &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; -e &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;\n&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; | passwd &lt;span style=&quot;color: #19177C&quot;&gt;$NB_USER&lt;/span&gt;
+
+
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Based on https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Default to UTF-8 file.encoding&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; LANG C.UTF-8&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; JAVA_HOME /usr/local/openjdk-11&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH $JAVA_HOME/bin:$PATH&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;{&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;#/bin/sh&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;echo &amp;quot;$JAVA_HOME&amp;quot;&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #666666&quot;&gt;}&lt;/span&gt; &amp;gt; /usr/local/bin/docker-java-home &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; chmod +x /usr/local/bin/docker-java-home &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;docker-java-home&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; JAVA_VERSION 11.0.9.1&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -eux; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;dpkg --print-architecture&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# this &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;case&amp;quot;&lt;/span&gt; statement is generated via &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;update.sh&amp;quot;&lt;/span&gt;
+	&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;case&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$arch&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; in &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# arm64v8
+		arm64 | aarch64&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;downloadUrl&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.9.1%2B1/OpenJDK11U-jdk_aarch64_linux_11.0.9.1_1.tar.gz ;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# amd64
+		amd64 | i386:x86-64&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;downloadUrl&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;https://github.com/AdoptOpenJDK/openjdk11-upstream-binaries/releases/download/jdk-11.0.9.1%2B1/OpenJDK11U-jdk_x64_linux_11.0.9.1_1.tar.gz ;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# fallback
+		*&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &amp;gt;&amp;amp;&lt;span style=&quot;color: #666666&quot;&gt;2&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;error: unsupported architecture: &amp;#39;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$arch&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #008000&quot;&gt;exit&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;1&lt;/span&gt; ;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;esac&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #19177C&quot;&gt;savedAptMark&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;apt-mark showmanual&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	apt-get update; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	apt-get install -y --no-install-recommends &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		dirmngr &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		gnupg &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		wget &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	rm -rf /var/lib/apt/lists/*; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	wget -O openjdk.tgz.asc &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$downloadUrl&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;.sign&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	wget -O openjdk.tgz &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$downloadUrl&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; --progress&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;dot:giga; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #008000&quot;&gt;export&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;GNUPGHOME&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;mktemp -d&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# TODO find a good link &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;for&lt;/span&gt; users to verify this key is right &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;https://mail.openjdk.java.net/pipermail/jdk-updates-dev/2019-April/000951.html is one of the only mentions of it I can find&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;; perhaps a note added to https://adoptopenjdk.net/upstream.html would make sense?
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# no-self-sigs-only: https://salsa.debian.org/debian/gnupg2/commit/c93ca04a53569916308b369c8b218dad5ae8fe07&lt;/span&gt;
+	gpg --batch --keyserver ha.pool.sks-keyservers.net --keyserver-options no-self-sigs-only --recv-keys CA5F11C6CE22644D42C6AC4492EF8D39DC13168F; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# also verify that key was signed by Andrew Haley &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;the OpenJDK &lt;span style=&quot;color: #666666&quot;&gt;8&lt;/span&gt; and &lt;span style=&quot;color: #666666&quot;&gt;11&lt;/span&gt; Updates OpenJDK project lead&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# (https://github.com/docker-library/openjdk/pull/322#discussion_r286839190)&lt;/span&gt;
+	gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys EAC843EBD3EFDB98CC772FADA5CD6035332FA671; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	gpg --batch --list-sigs --keyid-format 0xLONG CA5F11C6CE22644D42C6AC4492EF8D39DC13168F &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		| tee /dev/stderr &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		| grep &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0xA5CD6035332FA671&amp;#39;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		| grep &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;Andrew Haley&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	gpg --batch --verify openjdk.tgz.asc openjdk.tgz; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	gpgconf --kill all; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	rm -rf &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$GNUPGHOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	mkdir -p &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	tar --extract &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		--file openjdk.tgz &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		--directory &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		--strip-components &lt;span style=&quot;color: #666666&quot;&gt;1&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		--no-same-owner &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	rm openjdk.tgz*; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# TODO strip &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;demo&amp;quot;&lt;/span&gt; and &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;man&amp;quot;&lt;/span&gt; folders?
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	apt-mark auto &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;.*&amp;#39;&lt;/span&gt; &amp;gt; /dev/null; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; -z &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$savedAptMark&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; apt-mark manual &lt;span style=&quot;color: #19177C&quot;&gt;$savedAptMark&lt;/span&gt; &amp;gt; /dev/null; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;false; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# update &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;cacerts&amp;quot;&lt;/span&gt; bundle to use Debian&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;s CA certificates (and make sure it stays up-to-date with changes to Debian&amp;#39;&lt;/span&gt;s store&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# see https://github.com/docker-library/openjdk/issues/327&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#     http://rabexc.org/posts/certificates-not-working-java#comment-4099504075&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#     https://salsa.debian.org/java-team/ca-certificates-java/blob/3e51a84e9104823319abeb31f880580e46f45a98/debian/jks-keystore.hook.in&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#     https://git.alpinelinux.org/aports/tree/community/java-cacerts/APKBUILD?id=761af65f38b4570093461e6546dcf6b179d2b624#n29&lt;/span&gt;
+	&lt;span style=&quot;color: #666666&quot;&gt;{&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;#!/usr/bin/env bash&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;set -Eeuo pipefail&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;if ! [ -d &amp;quot;$JAVA_HOME&amp;quot; ]; then echo &amp;gt;&amp;amp;2 &amp;quot;error: missing JAVA_HOME environment variable&amp;quot;; exit 1; fi&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# &lt;span style=&quot;color: #666666&quot;&gt;8&lt;/span&gt;-jdk uses &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;/jre/lib/security/cacerts&amp;quot;&lt;/span&gt; and &lt;span style=&quot;color: #666666&quot;&gt;8&lt;/span&gt;-jre and &lt;span style=&quot;color: #666666&quot;&gt;11&lt;/span&gt;+ uses &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;/lib/security/cacerts&amp;quot;&lt;/span&gt; directly &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;no &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;jre&amp;quot;&lt;/span&gt; directory&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;cacertsFile=; for f in &amp;quot;$JAVA_HOME/lib/security/cacerts&amp;quot; &amp;quot;$JAVA_HOME/jre/lib/security/cacerts&amp;quot;; do if [ -e &amp;quot;$f&amp;quot; ]; then cacertsFile=&amp;quot;$f&amp;quot;; break; fi; done&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;if [ -z &amp;quot;$cacertsFile&amp;quot; ] || ! [ -f &amp;quot;$cacertsFile&amp;quot; ]; then echo &amp;gt;&amp;amp;2 &amp;quot;error: failed to find cacerts file in $JAVA_HOME&amp;quot;; exit 1; fi&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+		&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;trust extract --overwrite --format=java-cacerts --filter=ca-anchors --purpose=server-auth &amp;quot;$cacertsFile&amp;quot;&amp;#39;&lt;/span&gt;; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #666666&quot;&gt;}&lt;/span&gt; &amp;gt; /etc/ca-certificates/update.d/docker-openjdk; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	chmod +x /etc/ca-certificates/update.d/docker-openjdk; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	/etc/ca-certificates/update.d/docker-openjdk; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# https://github.com/docker-library/openjdk/issues/331#issuecomment-498834472
+	find &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JAVA_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;/lib&amp;quot;&lt;/span&gt; -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.so&amp;#39;&lt;/span&gt; -exec dirname &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;{}&amp;#39;&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;;&amp;#39;&lt;/span&gt; | sort -u &amp;gt; /etc/ld.so.conf.d/docker-openjdk.conf; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	ldconfig; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	&lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+# basic smoke test
+	&lt;span style=&quot;color: #19177C&quot;&gt;fileEncoding&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;System.out.println(System.getProperty(&amp;quot;file.encoding&amp;quot;))&amp;#39;&lt;/span&gt; | jshell -s -&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$fileEncoding&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;UTF-8&amp;#39;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;; rm -rf ~/.java; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	javac --version; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+	java --version
+
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Based on the Spark dockerfile&lt;/span&gt;
+
+COPY jars /opt/spark/jars
+COPY bin /opt/spark/bin
+COPY sbin /opt/spark/sbin
+COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Wildcard so it covers decom.sh present (3.1+) and not present (pre-3.1)&lt;/span&gt;
+COPY kubernetes/dockerfiles/spark/decom.sh* /opt/
+COPY examples /opt/spark/examples
+COPY kubernetes/tests /opt/spark/tests
+COPY data /opt/spark/data
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# We need to copy over the license file so we can pip install PySpark&lt;/span&gt;
+COPY LICENSE /opt/spark/LICENSE
+COPY licenses /opt/spark/licenses
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; SPARK_HOME /opt/spark&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Note: don&amp;#39;t change the workdir since then your Jupyter notebooks won&amp;#39;t persist.&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; chmod g+w /opt/spark/work-dir
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Wildcard so it covers decom.sh present (3.1+) and not present (pre-3.1)&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; chmod a+x /opt/decom.sh* &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;No decom script present, assuming pre-3.1&amp;quot;&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Copy pyspark with setup files and everything&lt;/span&gt;
+COPY python &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;/python
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Add PySpark to PYTHON_PATH&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; pip install -e &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;/python
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Switch to the user back to a non-root user that will actually do the running&lt;/span&gt;
+USER &lt;span style=&quot;color: #19177C&quot;&gt;$NB_USER&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Since the Dockerfile copies parts of Spark in, remember to save it at the root of where you decompressed the Spark tarball.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you&amp;#8217;re not cross building, you can build this with a regular &lt;code&gt;docker build&lt;/code&gt;, in my case since I&amp;#8217;m targetting arm and x86 I did built it as shown in &lt;a href=&quot;#build_spark_nb&quot;&gt;Build Spark notebook container&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;build_spark_nb&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 3. Build Spark notebook container&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;docker buildx build -t holdenk/spark-notebook:v3.0.1.2  --platform linux/arm64,linux/amd64 --push .&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;admonitionblock note&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td class=&quot;icon&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Note&lt;/div&gt;
+&lt;/td&gt;
+&lt;td class=&quot;content&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;An alternative would have been to take the JDK-11 containers as a starting point, and install Jupyter on top of it, but when I tried that I found it more complicated.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;This gives us a container with both Spark and the base notebook layer together. For the executors, we don&amp;#8217;t want to bother shipping Jupyter, so we&amp;#8217;ll build a seperate container for the executors.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;_building-the-executor-container&quot;&gt;Building the Executor Container&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Spark does not ship pre-built containers for its executors, so regardless of which arch you’re using, you will need to build the executor containers.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you&amp;#8217;re building multi-arch containers, you will need to update Spark&amp;#8217;s docker image tool. You will need to change the buildx option to push the images by adding &quot;--push&quot; to the docker buildx commands in the script for ./bin/docker-image-tool.sh.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Spark&amp;#8217;s Python container Dockerfile installs an older version of Python without any dependencies, so you will want to customize your Python container setup, as well. My Dockerfile is shown in &lt;a href=&quot;#spark_exec_dockerfile&quot;&gt;Dockerfile customizing PySpark setup&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;spark_exec_dockerfile&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 4. Dockerfile customizing PySpark setup&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Licensed to the Apache Software Foundation (ASF) under one or more&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# contributor license agreements.  See the NOTICE file distributed with&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# this work for additional information regarding copyright ownership.&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# The ASF licenses this file to You under the Apache License, Version 2.0&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# (the &amp;quot;License&amp;quot;); you may not use this file except in compliance with&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# the License.  You may obtain a copy of the License at&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#    http://www.apache.org/licenses/LICENSE-2.0&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Unless required by applicable law or agreed to in writing, software&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# distributed under the License is distributed on an &amp;quot;AS IS&amp;quot; BASIS,&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# See the License for the specific language governing permissions and&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# limitations under the License.&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#&lt;/span&gt;
+
+ARG base_img
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; $base_img&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;WORKDIR&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; /&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Reset to root to run installation tasks&lt;/span&gt;
+USER &lt;span style=&quot;color: #666666&quot;&gt;0&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENV&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; PATH /opt/conda/bin:$PATH&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; mkdir &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;/python
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; apt-get update --fix-missing &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt-get install -yq graphviz git build-essential cmake telnet &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    apt install -y bash tini libc6 libpam-modules krb5-user libnss3 procps ca-certificates p11-kit wget bzip2 git mercurial subversion &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    rm /bin/sh &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    ln -sv /bin/bash /bin/sh
+
+COPY bin/pysetup.sh /pysetup.sh 
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; chmod a+x /pysetup.sh &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; ./pysetup.sh
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;RUN&lt;/span&gt; conda install -c conda-forge --yes mamba &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;python&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==3&lt;/span&gt;.8.6 &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    pip install --upgrade pip setuptools &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    mamba install --yes &lt;span style=&quot;color: #19177C&quot;&gt;numpy&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;==1&lt;/span&gt;.19.2 pandas cytoolz numba lz4 scikit-build python-blosc&lt;span style=&quot;color: #666666&quot;&gt;=1&lt;/span&gt;.9.2 &lt;span style=&quot;color: #666666&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&quot;color: #BB6622; font-weight: bold&quot;&gt;\&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;mamba install --yes pyarrow &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt;  pip install -vvv pyarrow&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
+
+
+COPY python/pyspark &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;/python/pyspark
+COPY python/lib &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;/python/lib
+
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;WORKDIR&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; /opt/spark/work-dir&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [ &amp;quot;/opt/entrypoint.sh&amp;quot; ]&lt;/span&gt;
+
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Specify the User that the actual main process will run as&lt;/span&gt;
+ARG &lt;span style=&quot;color: #19177C&quot;&gt;spark_uid&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=185&lt;/span&gt;
+USER &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;spark_uid&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;You&amp;#8217;ll see this file references &lt;code&gt;pysetup.sh&lt;/code&gt; which installs Python using Miniforge so we can support arm as shown in &lt;a href=&quot;#pysetupsh&quot;&gt;Setup python&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;pysetupsh&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 5. Setup python&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#!/bin/bash&lt;/span&gt;
+
+&lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -ex
+&lt;span style=&quot;color: #008000&quot;&gt;export&lt;/span&gt; &lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;$(&lt;/span&gt;uname -m&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;)&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;if&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;[&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$arch&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;==&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;aarm64&amp;quot;&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;]&lt;/span&gt;; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;then&lt;/span&gt;
+  &lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;arm64&amp;quot;&lt;/span&gt;;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;fi&lt;/span&gt;
+wget --quiet https://github.com/conda-forge/miniforge/releases/download/4.8.5-1/Miniforge3-4.8.5-1-Linux-&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;arch&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;.sh -O ~/miniforge.sh
+chmod a+x ~/miniforge.sh
+~/miniforge.sh -b -p /opt/conda
+/opt/conda/bin/conda clean -tipsy
+ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;. /opt/conda/etc/profile.d/conda.sh&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;conda activate base&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; ~/.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;. /opt/conda/etc/profile.d/conda.sh&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; /etc/bash.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;conda activate base&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; /etc/bash.bashrc
+&lt;span style=&quot;color: #008000&quot;&gt;source&lt;/span&gt; ~/.bashrc
+find /opt/conda/ -follow -type f -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.a&amp;#39;&lt;/span&gt; -delete
+find /opt/conda/ -follow -type f -name &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;*.js.map&amp;#39;&lt;/span&gt; -delete
+/opt/conda/bin/conda clean -afy
+/opt/conda/bin/conda install --yes nomkl cytoolz cmake tini
+/opt/conda/bin/conda init bash
+/opt/conda/bin/conda install --yes mamba&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;You will want to make your Dockerfile install the dependencies for your program while making sure to select the same version of Python that you have in your Jupyter container, so you may need to modify those two examples.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Once you&amp;#8217;ve configured your enviroment, you can build your Spark image using the &lt;code&gt;docker-image-tool&lt;/code&gt; that ships with Spark as shown in &lt;a href=&quot;#build_exec_containers&quot;&gt;[build_exec_containers]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;build_exec_contianers&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 6. Build the exec containers&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Copy over python setup script so we can have matching pythons&lt;/span&gt;
+cp pysetup.sh ./spark-3.0.1-bin-hadoop3.2/bin/
+&lt;span style=&quot;color: #008000&quot;&gt;pushd&lt;/span&gt; spark-3.0.1-bin-hadoop3.2
+&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;`&lt;/span&gt;&lt;span style=&quot;color: #008000&quot;&gt;pwd&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;`&lt;/span&gt;
+&lt;span style=&quot;color: #19177C&quot;&gt;SPARK_ROOT&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$SPARK_HOME&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;
+./bin/docker-image-tool.sh  -r holdenk -t v3.0.1.2 -X -b &lt;span style=&quot;color: #19177C&quot;&gt;java_image_tag&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;=11&lt;/span&gt;-jre-slim -p PyDockerfile Dockerfile build&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;admonitionblock warning&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td class=&quot;icon&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Warning&lt;/div&gt;
+&lt;/td&gt;
+&lt;td class=&quot;content&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Some parts of Spark may assume a specific layout of the container, e.g. in Spark 3.1 the decommissioning integration makes certain assumptions, so be careful when making changes.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_setting-up-kubernetes-permissions&quot;&gt;Setting up Kubernetes Permissions&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The driver program needs the ability to launch new pods for executors. To allow launching, create a service account or give permissions to the default service account (SA) . In my case, I decided to add permissions to the &quot;dask&quot; service account since the JupyterHub launcher (covered later) doesn&amp;#8217;t support different service accounts depending on the notebook. I also created a special &quot;spark&quot; namespace to make it easier to watch what was happening. My namespace and SA setup is shown in &lt;a href=&quot;#setupsa&quot;&gt;Setup up namespace and service account&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;setupsa&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 7. Setup up namespace and service account&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;kubectl create serviceaccount -n jhub spark
+kubectl create namespace spark
+kubectl create rolebinding spark-role --clusterrole&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;edit --serviceaccount&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;jhub:spark --namespace&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;spark
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# We can&amp;#39;t override SA in the launcher on per-container basis, so since I&amp;#39;ve already got a dask SA.&lt;/span&gt;
+kubectl create rolebinding spark-role-to-dask-acc --clusterrole&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;edit --serviceaccount&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;jhub:dask --namespace&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;spark&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_creating-a-service-allowing-driver-executor-communication&quot;&gt;Creating a Service (Allowing Driver-Executor Communication)&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Spark depends on the executors connecting back to the driver for both the driver its self and the driver&amp;#8217;s BlockManager. If your driver is in a different namespace, the easiest way to allow communication is to create a service to let the executors connect to the driver.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;drvier_svc&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 8. The Spark Driver Service&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;apiVersion: v1
+kind: Service
+metadata:
+  name: driver-service
+spec:
+  selector:
+    app: jupyterhub
+    component: singleuser-server
+  ports:
+    - name: driver
+      protocol: TCP
+      port: &lt;span style=&quot;color: #666666&quot;&gt;2222&lt;/span&gt;
+      targetPort: &lt;span style=&quot;color: #666666&quot;&gt;2222&lt;/span&gt;
+    - name: blockmanager
+      protocol: TCP
+      port: &lt;span style=&quot;color: #666666&quot;&gt;7777&lt;/span&gt;
+      targetPort: &lt;span style=&quot;color: #666666&quot;&gt;7777&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id=&quot;drvier_svc_apply&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 9. Apply the Spark Driver Service&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;kubectl create service -n jhub driver-service.yaml&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;These port numbers are arbitrary (you can pick different ones), but you&amp;#8217;ll need to remember them when configuring your SparkContext.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_configuring-your-jupyterhub-launcher&quot;&gt;Configuring Your JupyterHub Launcher&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you have all of the foundational components set up, it&amp;#8217;s time to add them to your JupyterHub launcher. I did this by adding the &lt;code&gt;Spark 3.0.1&lt;/code&gt; option to the &lt;code&gt;profileList&lt;/code&gt; in my &lt;code&gt;config.yaml&lt;/code&gt; shown in &lt;a href=&quot;#my-jupyter-config&quot;&gt;[my-jupyter-config]&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;spark-jupyter-config&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 10. Combined Spark and Dask Jupyter Config&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;hub:
+  image:
+    name: holdenk/jupyter-hub-magichub
+proxy:
+  service:
+    type: NodePort
+  secretToken: DIFFERENTSECRET
+  secretSync:
+    image:
+      name: holdenk/jupyter-hub-magicsecret-sync
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  chp:
+    image:
+      name: holdenk/jconfigurable-http-proxy
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.0.1&amp;#39;&lt;/span&gt;
+ingress:
+  enabled: true
+  hosts:
+    - holdenkarau.mooo.com
+  tls:
+   - hosts:
+      - holdenkarau.mooo.com
+     secretName: k3s-mooo-tls
+singleuser:
+  serviceAccountName: dask
+  networkTools:
+    image:
+      name: holdenk/jupyter-hub-magicnetwork-tools
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  image:
+    name: holdenk/jupyter-hub-magicsingleuser-sample
+    tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+  profileList:
+    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Minimal&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;environment&amp;quot;&lt;/span&gt;
+      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;To&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;avoid&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;too&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;much&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;bells&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;and&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;whistles:&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Python.&amp;quot;&lt;/span&gt;
+      default: true
+    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Dask&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;container&amp;quot;&lt;/span&gt;
+      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;dask&amp;quot;&lt;/span&gt;
+      kubespawner_override:
+        image: holdenk/dask-notebook:v0.9.4b
+    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Spark&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;3.0.1&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;container&amp;quot;&lt;/span&gt;
+      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Spark&amp;quot;&lt;/span&gt;
+      kubespawner_override:
+        image: holdenk/spark-notebook:v3.0.1.1
+prePuller:
+  hook:
+    image:
+      name: holdenk/jupyter-hub-magicimage-awaiter
+      tag: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;0.10.2&amp;#39;&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Do something better here! It&amp;#39;s being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871&lt;/span&gt;
+auth:
+  type: dummy
+  dummy:
+    password: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;#39;mypassword&amp;#39;&lt;/span&gt;
+  whitelist:
+    users:
+      - user1
+      - user2&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;You can then upgrade your previous deployment with &lt;code&gt;helm upgrade --cleanup-on-fail   --install $RELEASE jupyterhub/jupyterhub   --namespace $NAMESPACE   --create-namespace   --version=0.10.2   --values config.yaml&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_configuring-your-spakcontext&quot;&gt;Configuring Your SpakContext&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that you can launch a notebook with everything needed for Spark, it&amp;#8217;s time to talk about configuring your SparkContext to work in this environment. You&amp;#8217;ll need more configuration than you can get through the SparkContext constructor directly, so you will also need to import the SparkConf. Your imports might look like &lt;a href=&quot;#sparkImports&quot;&gt;Spark Imports&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;sparkImports&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 11. Spark Imports&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;from&lt;/span&gt; &lt;span style=&quot;color: #0000FF; font-weight: bold&quot;&gt;pyspark&lt;/span&gt; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;import&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;*&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;from&lt;/span&gt; &lt;span style=&quot;color: #0000FF; font-weight: bold&quot;&gt;pyspark.context&lt;/span&gt; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;import&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;*&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;from&lt;/span&gt; &lt;span style=&quot;color: #0000FF; font-weight: bold&quot;&gt;pyspark.conf&lt;/span&gt; &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;import&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;*&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In my cluster, the K8s API is available at &lt;code&gt;&lt;a href=&quot;https://kubernetes.default&quot; class=&quot;bare&quot;&gt;https://kubernetes.default&lt;/a&gt;&lt;/code&gt;, so I start my configuration as in &lt;a href=&quot;#makeSparkConf&quot;&gt;Start of Spark Conf&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;makeSparkConf&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 12. Start of Spark Conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;conf &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; (SparkConf()&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;setMaster(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;k8s://https://kubernetes.default&amp;quot;&lt;/span&gt;)&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Since there are no pre-built docker images for Spark, you&amp;#8217;ll need to configure the container image used for the executor, mine is shown in &lt;a href=&quot;#configContainer&quot;&gt;Configure Container&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;configContainer&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 13. Configure Container&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.kubernetes.container.image&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;holdenk/spark-py:v3.0.1.2&amp;quot;&lt;/span&gt;)&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Normally Spark assigns ports randomly for things like the driver and the block manager, but we need to configure Spark to bind to the correct ports, and also have the executors connect to the service we&amp;#8217;ve created instead of trying to connect back to the hostname of the driver. My service configuration is shown in &lt;a href=&quot;#sparkNetConf&quot;&gt;Spark Network Conf&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;sparkNetConf&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 14. Spark Network Conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.driver.port&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;2222&amp;quot;&lt;/span&gt;) &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Needs to match svc&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.driver.blockManager.port&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;7777&amp;quot;&lt;/span&gt;)
+    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.driver.host&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;driver-service.jhub.svc.cluster.local&amp;quot;&lt;/span&gt;) &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Needs to match svc&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.driver.bindAddress&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;0.0.0.0&amp;quot;&lt;/span&gt;) &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#  Otherwise tries to bind to svc IP, will fail&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In addition to that, you&amp;#8217;ll need to tell Spark which namespace it has permission to create executors in, shown in &lt;a href=&quot;#sparkNSConf&quot;&gt;Spark Namespace Conf&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div id=&quot;sparkNSConf&quot; class=&quot;exampleblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Example 15. Spark Namespace Conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;python&quot;&gt;&lt;span&gt;&lt;/span&gt;    &lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;set(&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark.kubernetes.namespace&amp;quot;&lt;/span&gt;, &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;spark&amp;quot;&lt;/span&gt;)&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;While it&amp;#8217;s not essential, configuring an application name makes debugging much easier. You can do this with &lt;code&gt;.set(&quot;spark.app.name&quot;, &quot;PySparkHelloWorldInsideTheCluster&quot;)&lt;/code&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;_conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The process of adding a Spark notebook to your JupyterHub launcher is a little more involved than it is for typical notebooks because of the required permissions and network connections. Moving inside the cluster from outside of the cluster can offer many advantages, especially if your connection to the cluster goes over the internet. If you aren&amp;#8217;t familiar with Spark, there is a new version of &lt;a href=&quot;https://amzn.to/2WxB1I1&quot;&gt;&lt;em&gt;Learning Spark&lt;/em&gt;&lt;/a&gt; by my former co-workers (or you can buy the &lt;a href=&quot;https://amzn.to/2Ww3s98&quot;&gt;old one I co-wrote&lt;/a&gt;, but it&amp;#8217;s pretty out of date), along with Rachel &amp;amp; my &lt;a href=&quot;https://amzn.to/3paoE0L&quot;&gt;&lt;em&gt;High Performance Spark&lt;/em&gt;&lt;/a&gt;. Up next, I&amp;#8217;m planning on deploying Ray on the cluster, then jumping back to Dask and with the GitHub and BitCoin data.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&amp;#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven&amp;#8217;t.</summary></entry><entry><title type="html">Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes</title><link href="https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html" rel="alternate" type="text/html" title="Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes" /><published>2020-12-12T00:00:00-08:00</published><updated>2020-12-12T00:00:00-08:00</updated><id>https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s</id><content type="html" xml:base="https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html">&lt;div id=&quot;preamble&quot;&gt;
 &lt;div class=&quot;sectionbody&quot;&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
 &lt;p&gt;In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We&amp;#8217;ll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the &lt;a href=&quot;/2020/11/03/a-first-look-at-dask-on-arm-on-k8s.html&quot;&gt;previous post, I got Dask on ARM on Kubernetes working&lt;/a&gt;, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.&lt;/p&gt;
