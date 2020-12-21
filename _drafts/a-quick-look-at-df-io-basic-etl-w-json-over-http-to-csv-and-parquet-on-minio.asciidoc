@@ -7,7 +7,7 @@ For now, we'll start by taking all of the GitHub activity https://www.gharchive.
 == File Systems (e.g., Data Stores, Sinks, and well File Systems)
 
 
-Often, the need to scale our Python programs comes at least in part from larger input sizes. When we use distributed systems (like Kubernetes), the data must be accessible to all workers. For this reason, we end up needing to get our data over the network. This does not have to be what one would traditionally think of as a network file system (like, say, NFS or AFS); it can include things such as HTTP, S3, HDFS, etc. All of these protocols expose some common file-like access. 
+Often, the need to scale our Python programs comes at least in part from larger input sizes. When we use distributed systems (like Kubernetes), the data must be accessible to all workers. For this reason, we end up needing to get our data over the network. This does not have to be what one would traditionally think of as a network file system (like, say, NFS or AFS); it can include things such as HTTP, S3, HDFS, etc. All of these protocols expose some common file-like access.
 
 Dask's file access layer uses https://github.com/intake/filesystem_spec[FSSPEC], from the https://intake.readthedocs.io/en/latest/[intake project], to access the different file systems. Since FSSPEC supports such a range of file systems, it does not install the requirements for every supported file system. You can see what file systems are supported, and which ones need additional packages by running:
 
@@ -183,4 +183,4 @@ Dask does not support "streaming" non-random access input formats. This means th
 == Conclusion
 
 
-Dask I/O integrates pretty well into much of the existing "big data" ecosystem, although the methods of specifying configuration are a little bit different. Some nested data structures can be difficult to represent in certain formats with Dask, although as the Python libraries for these formats continue to improve so will Dask's support. 
+Dask I/O integrates pretty well into much of the existing "big data" ecosystem, although the methods of specifying configuration are a little bit different. Some nested data structures can be difficult to represent in certain formats with Dask, although as the Python libraries for these formats continue to improve so will Dask's support.

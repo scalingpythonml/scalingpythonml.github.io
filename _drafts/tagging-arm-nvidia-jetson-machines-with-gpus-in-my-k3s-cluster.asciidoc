@@ -1,28 +1,34 @@
 = Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster
 
 
-We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it's important to be able to request these resources from the Kubernetes scheduler. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I've got NVidia boards we'll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.
+We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it's important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in <<my-cluster-img>>. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I've got NVidia boards we'll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.
+
+[[my-cluster-img]]
+image::../images/pi-and-jetson-IMG_0629.jpg[Image of Raspbery Pis on top with Jetson Xaviers down bellow]
 
 == Disabling un-needed checks
 
 
-The Wind River folks havehttps://blogs.windriver.com/wind_river_blog/2020/06/nvidia-k8s-device-plugin-for-wind-river-linux/[ published a series of patches for NVidia] and instructions. You can apply these patches with
+The Wind River folks have link:$$https://blogs.windriver.com/wind_river_blog/2020/06/nvidia-k8s-device-plugin-for-wind-river-linux/$$[ published a series of patches for NVidia] and instructions. You can apply these patches by running the commands in <<pathc_ex>>.
 
-patch -p1 < 0001-arm64-add-support-for-arm64-architectures.patch 
+.Apply the Wind River patches to the ARM tagging.
+[[patch_ex]]
+====
+[source, bash]
+----
+patch -p1 < 0001-arm64-add-support-for-arm64-architectures.patch
 patch -p1 < 0002-nvidia-Add-support-for-tegra-boards.patch
+----
+====
 
 The third patch doesn't quite apply cleanly, as the loading NVML code has changed a bit (namely, failOnInitErrorFlag has been added). However, if you take a look at the patch, you can manually apply it by looking for the "log.Println("Loading NVML")" statement and replacing that chunk of code with the new code (indicated by the +s in the patch file).
 
 == Building the arm image
 
 
-Building the image with ARM support is now relatively simple. If you're running on an ARM machine you can just build as normal:
+Building the image with ARM support is now relatively simple. If you're running on an ARM machine you can just build as normal, e.g. `docker build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 -f ./docker/arm64/Dockerfile.ubuntu16.04 .`
 
-docker build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 -f ./docker/arm64/Dockerfile.ubuntu16.04 .
-
-Otherwise, assuming you've set up cross-building, you can use buildx and just specify one platform:
-
-docker buildx build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 --platform linux/arm64 --push -f ./docker/arm64/Dockerfile.ubuntu16.04 .
+Otherwise, assuming you've set up cross-building, you can use buildx and just specify one platform, `docker buildx build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 --platform linux/arm64 --push -f ./docker/arm64/Dockerfile.ubuntu16.04 .`
 
 
 == Building a multi-arch image
@@ -30,9 +36,7 @@ docker buildx build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 --platform linux/a
 
 If you have a mix of ARM and x86 machines in your cluster (as I do), having just an ARM image makes deployment a bit difficult. Thankfully we can update the Dockerfile to make it multi-arch by adding the `ARG TARGETARCH` and taking out the hardcoded arm64 references. For the `--platform=arm64` we can just go ahead and remove them, and for the wget, we can replace `arm64` with `${TARGETARCH}`.
 
-Now, assuming you've got your multi-arch Docker build environment set up, you can cross-build this with:
-
-docker buildx build -t holdenk/k8s-device-plugin:v0.7.0.1 --platform linux/arm64,linux/amd64 --push -f ./docker/multi/Dockerfile.ubuntu16.04 .
+Now, assuming you've got your multi-arch Docker build environment set up, you can cross-build this with, `docker buildx build -t holdenk/k8s-device-plugin:v0.7.0.1 --platform linux/arm64,linux/amd64 --push -f ./docker/multi/Dockerfile.ubuntu16.04 .`.
 
 == Updating the YAML & deploying.
 
