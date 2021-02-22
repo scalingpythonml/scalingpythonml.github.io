@@ -4,7 +4,7 @@
 We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it's important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in <<my-cluster-img>>. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I've got NVidia boards we'll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.
 
 [[my-cluster-img]]
-image::../images/pi-and-jetson-IMG_0629.jpg[Image of Raspbery Pis on top with Jetson Xaviers down bellow]
+image::/images/pi-and-jetson-IMG_0629.jpg[Image of Raspbery Pis on top with Jetson Xaviers down bellow]
 
 == Disabling un-needed checks
 
