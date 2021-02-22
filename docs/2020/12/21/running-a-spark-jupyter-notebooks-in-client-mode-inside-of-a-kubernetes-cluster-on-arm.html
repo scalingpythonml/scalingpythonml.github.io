@@ -16,7 +16,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-12-21T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","dateModified":"2020-12-21T00:00:00-08:00","datePublished":"2020-12-21T00:00:00-08:00","headline":"Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)","url":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html"},"description":"Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven&#8217;t.","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html"},"url":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html","headline":"Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)","dateModified":"2020-12-21T00:00:00-08:00","datePublished":"2020-12-21T00:00:00-08:00","description":"Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven&#8217;t.","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -193,10 +193,10 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2</span>
 
 <span style="color: #408080; font-style: italic"># Switch to root to install stuff</span>
-USER root
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> root</span>
 
 <span style="color: #408080; font-style: italic"># Use multiple cores to compile the C code :)</span>
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> MAKEFLAGS -j 4</span>
+<span style="color: #008000; font-weight: bold">ENV</span> MAKEFLAGS -j <span style="color: #666666">4</span>
 
 
 <span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #008000">set</span> -eux; <span style="color: #BB6622; font-weight: bold">\</span>
@@ -227,12 +227,12 @@ USER root
 <span style="color: #408080; font-style: italic"># Based on https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile</span>
 
 <span style="color: #408080; font-style: italic"># Default to UTF-8 file.encoding</span>
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> LANG C.UTF-8</span>
+<span style="color: #008000; font-weight: bold">ENV</span> LANG C.UTF-8
 
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> JAVA_HOME /usr/local/openjdk-11</span>
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH $JAVA_HOME/bin:$PATH</span>
+<span style="color: #008000; font-weight: bold">ENV</span> JAVA_HOME /usr/local/openjdk-11
+<span style="color: #008000; font-weight: bold">ENV</span> PATH <span style="color: #19177C">$JAVA_HOME</span>/bin:<span style="color: #19177C">$PATH</span>
 <span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #666666">{</span> <span style="color: #008000">echo</span> <span style="color: #BA2121">&#39;#/bin/sh&#39;</span>; <span style="color: #008000">echo</span> <span style="color: #BA2121">&#39;echo &quot;$JAVA_HOME&quot;&#39;</span>; <span style="color: #666666">}</span> &gt; /usr/local/bin/docker-java-home <span style="color: #666666">&amp;&amp;</span> chmod +x /usr/local/bin/docker-java-home <span style="color: #666666">&amp;&amp;</span> <span style="color: #666666">[</span> <span style="color: #BA2121">&quot;</span><span style="color: #19177C">$JAVA_HOME</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">=</span> <span style="color: #BA2121">&quot;</span><span style="color: #008000; font-weight: bold">$(</span>docker-java-home<span style="color: #008000; font-weight: bold">)</span><span style="color: #BA2121">&quot;</span> <span style="color: #666666">]</span>
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> JAVA_VERSION 11.0.9.1</span>
+<span style="color: #008000; font-weight: bold">ENV</span> JAVA_VERSION <span style="color: #666666">11</span>.0.9.1
 
 <span style="color: #008000; font-weight: bold">RUN</span> <span style="color: #008000">set</span> -eux; <span style="color: #BB6622; font-weight: bold">\</span>
 	<span style="color: #BB6622; font-weight: bold">\</span>
@@ -318,20 +318,20 @@ USER root
 
 <span style="color: #408080; font-style: italic"># Based on the Spark dockerfile</span>
 
-COPY jars /opt/spark/jars
-COPY bin /opt/spark/bin
-COPY sbin /opt/spark/sbin
-COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+<span style="color: #008000; font-weight: bold">COPY</span> jars /opt/spark/jars
+<span style="color: #008000; font-weight: bold">COPY</span> bin /opt/spark/bin
+<span style="color: #008000; font-weight: bold">COPY</span> sbin /opt/spark/sbin
+<span style="color: #008000; font-weight: bold">COPY</span> kubernetes/dockerfiles/spark/entrypoint.sh /opt/
 <span style="color: #408080; font-style: italic"># Wildcard so it covers decom.sh present (3.1+) and not present (pre-3.1)</span>
-COPY kubernetes/dockerfiles/spark/decom.sh* /opt/
-COPY examples /opt/spark/examples
-COPY kubernetes/tests /opt/spark/tests
-COPY data /opt/spark/data
+<span style="color: #008000; font-weight: bold">COPY</span> kubernetes/dockerfiles/spark/decom.sh* /opt/
+<span style="color: #008000; font-weight: bold">COPY</span> examples /opt/spark/examples
+<span style="color: #008000; font-weight: bold">COPY</span> kubernetes/tests /opt/spark/tests
+<span style="color: #008000; font-weight: bold">COPY</span> data /opt/spark/data
 <span style="color: #408080; font-style: italic"># We need to copy over the license file so we can pip install PySpark</span>
-COPY LICENSE /opt/spark/LICENSE
-COPY licenses /opt/spark/licenses
+<span style="color: #008000; font-weight: bold">COPY</span> LICENSE /opt/spark/LICENSE
+<span style="color: #008000; font-weight: bold">COPY</span> licenses /opt/spark/licenses
 
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> SPARK_HOME /opt/spark</span>
+<span style="color: #008000; font-weight: bold">ENV</span> SPARK_HOME /opt/spark
 
 <span style="color: #408080; font-style: italic"># Note: don&#39;t change the workdir since then your Jupyter notebooks won&#39;t persist.</span>
 <span style="color: #008000; font-weight: bold">RUN</span> chmod g+w /opt/spark/work-dir
@@ -339,14 +339,14 @@ COPY licenses /opt/spark/licenses
 <span style="color: #008000; font-weight: bold">RUN</span> chmod a+x /opt/decom.sh* <span style="color: #666666">||</span> <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;No decom script present, assuming pre-3.1&quot;</span>
 
 <span style="color: #408080; font-style: italic"># Copy pyspark with setup files and everything</span>
-COPY python <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python
+<span style="color: #008000; font-weight: bold">COPY</span> python <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python
 
 <span style="color: #408080; font-style: italic"># Add PySpark to PYTHON_PATH</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> pip install -e <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python
 
 <span style="color: #408080; font-style: italic"># Switch to the user back to a non-root user that will actually do the running</span>
-USER <span style="color: #19177C">$NB_USER</span></code></pre>
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> $NB_USER</span></code></pre>
 </div>
 </div>
 </div>
@@ -418,15 +418,15 @@ USER <span style="color: #19177C">$NB_USER</span></code></pre>
 <span style="color: #408080; font-style: italic"># limitations under the License.</span>
 <span style="color: #408080; font-style: italic">#</span>
 
-ARG base_img
+<span style="color: #008000; font-weight: bold">ARG</span> base_img
 
 <span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121"> $base_img</span>
 <span style="color: #008000; font-weight: bold">WORKDIR</span><span style="color: #BA2121"> /</span>
 
 <span style="color: #408080; font-style: italic"># Reset to root to run installation tasks</span>
-USER <span style="color: #666666">0</span>
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> 0</span>
 
-<span style="color: #008000; font-weight: bold">ENV</span><span style="color: #BA2121"> PATH /opt/conda/bin:$PATH</span>
+<span style="color: #008000; font-weight: bold">ENV</span> PATH /opt/conda/bin:<span style="color: #19177C">$PATH</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> mkdir <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python
 
@@ -436,7 +436,7 @@ USER <span style="color: #666666">0</span>
     rm /bin/sh <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     ln -sv /bin/bash /bin/sh
 
-COPY bin/pysetup.sh /pysetup.sh 
+<span style="color: #008000; font-weight: bold">COPY</span> bin/pysetup.sh /pysetup.sh 
 <span style="color: #008000; font-weight: bold">RUN</span> chmod a+x /pysetup.sh <span style="color: #666666">&amp;&amp;</span> ./pysetup.sh
 <span style="color: #008000; font-weight: bold">RUN</span> conda install -c conda-forge --yes mamba <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     mamba install --yes <span style="color: #19177C">python</span><span style="color: #666666">==3</span>.8.6 <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
@@ -445,15 +445,15 @@ COPY bin/pysetup.sh /pysetup.sh
     <span style="color: #666666">(</span>mamba install --yes pyarrow <span style="color: #666666">||</span>  pip install -vvv pyarrow<span style="color: #666666">)</span>
 
 
-COPY python/pyspark <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/pyspark
-COPY python/lib <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/lib
+<span style="color: #008000; font-weight: bold">COPY</span> python/pyspark <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/pyspark
+<span style="color: #008000; font-weight: bold">COPY</span> python/lib <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/lib
 
 <span style="color: #008000; font-weight: bold">WORKDIR</span><span style="color: #BA2121"> /opt/spark/work-dir</span>
-<span style="color: #008000; font-weight: bold">ENTRYPOINT</span><span style="color: #BA2121"> [ &quot;/opt/entrypoint.sh&quot; ]</span>
+<span style="color: #008000; font-weight: bold">ENTRYPOINT</span> [ <span style="color: #BA2121">&quot;/opt/entrypoint.sh&quot;</span> ]
 
 <span style="color: #408080; font-style: italic"># Specify the User that the actual main process will run as</span>
-ARG <span style="color: #19177C">spark_uid</span><span style="color: #666666">=185</span>
-USER <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">spark_uid</span><span style="color: #BB6688; font-weight: bold">}</span></code></pre>
+<span style="color: #008000; font-weight: bold">ARG</span> <span style="color: #19177C">spark_uid</span><span style="color: #666666">=185</span>
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> ${spark_uid}</span></code></pre>
 </div>
 </div>
 </div>
@@ -611,62 +611,62 @@ spec:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>hub:
-  image:
-    name: holdenk/jupyter-hub-magichub
-proxy:
-  service:
-    type: NodePort
-  secretToken: DIFFERENTSECRET
-  secretSync:
-    image:
-      name: holdenk/jupyter-hub-magicsecret-sync
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  chp:
-    image:
-      name: holdenk/jconfigurable-http-proxy
-      tag: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
-ingress:
-  enabled: true
-  hosts:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">hub</span>:
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magichub
+<span style="color: #008000; font-weight: bold">proxy</span>:
+  <span style="color: #008000; font-weight: bold">service</span>:
+    <span style="color: #008000; font-weight: bold">type</span>: NodePort
+  <span style="color: #008000; font-weight: bold">secretToken</span>: DIFFERENTSECRET
+  <span style="color: #008000; font-weight: bold">secretSync</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsecret-sync
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">chp</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jconfigurable-http-proxy
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
+<span style="color: #008000; font-weight: bold">ingress</span>:
+  <span style="color: #008000; font-weight: bold">enabled</span>: true
+  <span style="color: #008000; font-weight: bold">hosts</span>:
     - holdenkarau.mooo.com
-  tls:
-   - hosts:
+  <span style="color: #008000; font-weight: bold">tls</span>:
+   - <span style="color: #008000; font-weight: bold">hosts</span>:
       - holdenkarau.mooo.com
-     secretName: k3s-mooo-tls
-singleuser:
-  serviceAccountName: dask
-  networkTools:
-    image:
-      name: holdenk/jupyter-hub-magicnetwork-tools
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  image:
-    name: holdenk/jupyter-hub-magicsingleuser-sample
-    tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  profileList:
-    - display_name: <span style="color: #BA2121">&quot;Minimal</span><span style="color: #19177C"> </span><span style="color: #BA2121">environment&quot;</span>
-      description: <span style="color: #BA2121">&quot;To</span><span style="color: #19177C"> </span><span style="color: #BA2121">avoid</span><span style="color: #19177C"> </span><span style="color: #BA2121">too</span><span style="color: #19177C"> </span><span style="color: #BA2121">much</span><span style="color: #19177C"> </span><span style="color: #BA2121">bells</span><span style="color: #19177C"> </span><span style="color: #BA2121">and</span><span style="color: #19177C"> </span><span style="color: #BA2121">whistles:</span><span style="color: #19177C"> </span><span style="color: #BA2121">Python.&quot;</span>
-      default: true
-    - display_name: <span style="color: #BA2121">&quot;Dask</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
-      description: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">dask&quot;</span>
-      kubespawner_override:
-        image: holdenk/dask-notebook:v0.9.4b
-    - display_name: <span style="color: #BA2121">&quot;Spark</span><span style="color: #19177C"> </span><span style="color: #BA2121">3.0.1</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
-      description: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">Spark&quot;</span>
-      kubespawner_override:
-        image: holdenk/spark-notebook:v3.0.1.1
-prePuller:
-  hook:
-    image:
-      name: holdenk/jupyter-hub-magicimage-awaiter
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+     <span style="color: #008000; font-weight: bold">secretName</span>: k3s-mooo-tls
+<span style="color: #008000; font-weight: bold">singleuser</span>:
+  <span style="color: #008000; font-weight: bold">serviceAccountName</span>: dask
+  <span style="color: #008000; font-weight: bold">networkTools</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicnetwork-tools
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsingleuser-sample
+    <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">profileList</span>:
+    - <span style="color: #008000; font-weight: bold">display_name</span>: <span style="color: #BA2121">&quot;Minimal</span><span style="color: #19177C"> </span><span style="color: #BA2121">environment&quot;</span>
+      <span style="color: #008000; font-weight: bold">description</span>: <span style="color: #008000; font-weight: bold">&quot;To avoid too much bells and whistles</span>: Python.&quot;
+      <span style="color: #008000; font-weight: bold">default</span>: true
+    - <span style="color: #008000; font-weight: bold">display_name</span>: <span style="color: #BA2121">&quot;Dask</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
+      <span style="color: #008000; font-weight: bold">description</span>: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">dask&quot;</span>
+      <span style="color: #008000; font-weight: bold">kubespawner_override</span>:
+        <span style="color: #008000; font-weight: bold">image</span>: holdenk/dask-notebook:v0.9.4b
+    - <span style="color: #008000; font-weight: bold">display_name</span>: <span style="color: #BA2121">&quot;Spark</span><span style="color: #19177C"> </span><span style="color: #BA2121">3.0.1</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
+      <span style="color: #008000; font-weight: bold">description</span>: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">Spark&quot;</span>
+      <span style="color: #008000; font-weight: bold">kubespawner_override</span>:
+        <span style="color: #008000; font-weight: bold">image</span>: holdenk/spark-notebook:v3.0.1.1
+<span style="color: #008000; font-weight: bold">prePuller</span>:
+  <span style="color: #008000; font-weight: bold">hook</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicimage-awaiter
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
 <span style="color: #408080; font-style: italic"># Do something better here! It&#39;s being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871</span>
-auth:
-  type: dummy
-  dummy:
-    password: <span style="color: #BA2121">&#39;mypassword&#39;</span>
-  whitelist:
-    users:
+<span style="color: #008000; font-weight: bold">auth</span>:
+  <span style="color: #008000; font-weight: bold">type</span>: dummy
+  <span style="color: #008000; font-weight: bold">dummy</span>:
+    <span style="color: #008000; font-weight: bold">password</span>: <span style="color: #BA2121">&#39;mypassword&#39;</span>
+  <span style="color: #008000; font-weight: bold">whitelist</span>:
+    <span style="color: #008000; font-weight: bold">users</span>:
       - user1
       - user2</code></pre>
 </div>

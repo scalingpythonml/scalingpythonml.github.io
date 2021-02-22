@@ -16,7 +16,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-12-12T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","dateModified":"2020-12-12T00:00:00-08:00","datePublished":"2020-12-12T00:00:00-08:00","headline":"Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes","url":"https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html"},"description":"In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We&#8217;ll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html"},"url":"https://scalingpythonml.com/2020/12/12/deploying-jupyter-lab-notebook-for-dask-on-arm-on-k8s.html","headline":"Deploying Jupyter Lab/Notebook for Dask on ARM on Kubernetes","dateModified":"2020-12-12T00:00:00-08:00","datePublished":"2020-12-12T00:00:00-08:00","description":"In this post, we are going to go through how to deploy Jupyter Lab on ARM on Kubernetes. We&#8217;ll also build a container for use with Dask, but you can skip/customize this step to meet your own needs. In the previous post, I got Dask on ARM on Kubernetes working, while using remote access to allow the Jupyter notebook to run outside of the cluster. After running into a few issues from having the client code outside of the cluster, I decided it was worth the effort to set up Jupyter on ARM on K8s.","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -242,32 +242,32 @@ helm repo update</code></pre>
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>hub:
-  image:
-    name: holdenk/jupyter-hub-magichub
-proxy:
-  secretSync:
-    image:
-      name: holdenk/jupyter-hub-magicsecret-sync
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">hub</span>:
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magichub
+<span style="color: #008000; font-weight: bold">proxy</span>:
+  <span style="color: #008000; font-weight: bold">secretSync</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsecret-sync
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
 <span style="color: #408080; font-style: italic"># This one needs to be override either way.</span>
-  chp:
-    image:
-      name: holdenk/jconfigurable-http-proxy
-      tag: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
-singleuser:
-  networkTools:
-    image:
-      name: holdenk/jupyter-hub-magicnetwork-tools
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  image:
-    name: holdenk/jupyter-hub-magicsingleuser-sample
-    tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-prePuller:
-  hook:
-    image:
-      name: holdenk/jupyter-hub-magicimage-awaiter
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span></code></pre>
+  <span style="color: #008000; font-weight: bold">chp</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jconfigurable-http-proxy
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
+<span style="color: #008000; font-weight: bold">singleuser</span>:
+  <span style="color: #008000; font-weight: bold">networkTools</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicnetwork-tools
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsingleuser-sample
+    <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+<span style="color: #008000; font-weight: bold">prePuller</span>:
+  <span style="color: #008000; font-weight: bold">hook</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicimage-awaiter
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span></code></pre>
 </div>
 </div>
 </div>
@@ -288,18 +288,18 @@ prePuller:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
-  name: k3s-mooo
-  namespace: jhub
-spec:
-  secretName: k3s-mooo-tls
-  issuerRef:
-    name: letsencrypt-prod
-    kind: ClusterIssuer
-  commonName: holdenkarau.mooo.com
-  dnsNames:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">apiVersion</span>: cert-manager.io/v1alpha2
+<span style="color: #008000; font-weight: bold">kind</span>: Certificate
+<span style="color: #008000; font-weight: bold">metadata</span>:
+  <span style="color: #008000; font-weight: bold">name</span>: k3s-mooo
+  <span style="color: #008000; font-weight: bold">namespace</span>: jhub
+<span style="color: #008000; font-weight: bold">spec</span>:
+  <span style="color: #008000; font-weight: bold">secretName</span>: k3s-mooo-tls
+  <span style="color: #008000; font-weight: bold">issuerRef</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: letsencrypt-prod
+    <span style="color: #008000; font-weight: bold">kind</span>: ClusterIssuer
+  <span style="color: #008000; font-weight: bold">commonName</span>: holdenkarau.mooo.com
+  <span style="color: #008000; font-weight: bold">dnsNames</span>:
   - holdenkarau.mooo.com</code></pre>
 </div>
 </div>
@@ -315,14 +315,14 @@ spec:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>ingress:
-  enabled: true
-  hosts:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">ingress</span>:
+  <span style="color: #008000; font-weight: bold">enabled</span>: true
+  <span style="color: #008000; font-weight: bold">hosts</span>:
     - holdenkarau.mooo.com
-  tls:
-   - hosts:
+  <span style="color: #008000; font-weight: bold">tls</span>:
+   - <span style="color: #008000; font-weight: bold">hosts</span>:
       - holdenkarau.mooo.com
-     secretName: k3s-mooo-tls</code></pre>
+     <span style="color: #008000; font-weight: bold">secretName</span>: k3s-mooo-tls</code></pre>
 </div>
 </div>
 </div>
@@ -337,10 +337,10 @@ spec:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>proxy:
-  service:
-    type: NodePort
-  secretToken: DIFFERENTSECRET</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">proxy</span>:
+  <span style="color: #008000; font-weight: bold">service</span>:
+    <span style="color: #008000; font-weight: bold">type</span>: NodePort
+  <span style="color: #008000; font-weight: bold">secretToken</span>: DIFFERENTSECRET</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -358,12 +358,12 @@ so for now I just hard coded what is known as "dummy" authentication. I recommen
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>auth:
-  type: dummy
-  dummy:
-    password: <span style="color: #BA2121">&#39;mypassword&#39;</span>
-  whitelist:
-    users:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">auth</span>:
+  <span style="color: #008000; font-weight: bold">type</span>: dummy
+  <span style="color: #008000; font-weight: bold">dummy</span>:
+    <span style="color: #008000; font-weight: bold">password</span>: <span style="color: #BA2121">&#39;mypassword&#39;</span>
+  <span style="color: #008000; font-weight: bold">whitelist</span>:
+    <span style="color: #008000; font-weight: bold">users</span>:
       - user1
       - user2</code></pre>
 </div>
@@ -406,34 +406,34 @@ To start with create a specification for the what permission your notebook is go
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: daskKubernetes
-  namespace: dask
-rules:
-- apiGroups:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">kind</span>: Role
+<span style="color: #008000; font-weight: bold">apiVersion</span>: rbac.authorization.k8s.io/v1beta1
+<span style="color: #008000; font-weight: bold">metadata</span>:
+  <span style="color: #008000; font-weight: bold">name</span>: daskKubernetes
+  <span style="color: #008000; font-weight: bold">namespace</span>: dask
+<span style="color: #008000; font-weight: bold">rules</span>:
+- <span style="color: #008000; font-weight: bold">apiGroups</span>:
   - <span style="color: #BA2121">&quot;&quot;</span>  <span style="color: #408080; font-style: italic"># indicates the core API group</span>
-  resources:
+  <span style="color: #008000; font-weight: bold">resources</span>:
   - <span style="color: #BA2121">&quot;pods&quot;</span>
-  verbs:
+  <span style="color: #008000; font-weight: bold">verbs</span>:
   - <span style="color: #BA2121">&quot;get&quot;</span>
   - <span style="color: #BA2121">&quot;list&quot;</span>
   - <span style="color: #BA2121">&quot;watch&quot;</span>
   - <span style="color: #BA2121">&quot;create&quot;</span>
   - <span style="color: #BA2121">&quot;delete&quot;</span>
-- apiGroups:
+- <span style="color: #008000; font-weight: bold">apiGroups</span>:
   - <span style="color: #BA2121">&quot;&quot;</span>  <span style="color: #408080; font-style: italic"># indicates the core API group</span>
-  resources:
+  <span style="color: #008000; font-weight: bold">resources</span>:
   - <span style="color: #BA2121">&quot;pods/log&quot;</span>
-  verbs:
+  <span style="color: #008000; font-weight: bold">verbs</span>:
   - <span style="color: #BA2121">&quot;get&quot;</span>
   - <span style="color: #BA2121">&quot;list&quot;</span>
-- apiGroups:
+- <span style="color: #008000; font-weight: bold">apiGroups</span>:
   - <span style="color: #BA2121">&quot;&quot;</span> <span style="color: #408080; font-style: italic"># indicates the core API group</span>
-  resources:
+  <span style="color: #008000; font-weight: bold">resources</span>:
   - <span style="color: #BA2121">&quot;services&quot;</span>
-  verbs:
+  <span style="color: #008000; font-weight: bold">verbs</span>:
   - <span style="color: #BA2121">&quot;get&quot;</span>
   - <span style="color: #BA2121">&quot;list&quot;</span>
   - <span style="color: #BA2121">&quot;watch&quot;</span>
@@ -470,7 +470,7 @@ kubectl create rolebinding dask-sa-binding --namespace dask --role<span style="c
 <div class="content">
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2</span>
 
-USER root
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> root</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> apt-get update <span style="color: #BB6622; font-weight: bold">\</span>
     <span style="color: #666666">&amp;&amp;</span> apt-get install -yq graphviz git build-essential <span style="color: #BB6622; font-weight: bold">\</span>
@@ -479,7 +479,7 @@ USER root
 
 <span style="color: #008000; font-weight: bold">RUN</span> touch /hello_holden
 
-USER <span style="color: #19177C">$NB_USER</span>
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> $NB_USER</span>
 
 <span style="color: #008000; font-weight: bold">RUN</span> conda install -c conda-forge --yes mamba
 <span style="color: #008000; font-weight: bold">RUN</span> mamba install --yes <span style="color: #19177C">python</span><span style="color: #666666">==3</span>.8.6
@@ -510,7 +510,7 @@ USER <span style="color: #19177C">$NB_USER</span>
     <span style="color: #666666">&amp;&amp;</span> find /opt/conda/lib/python*/site-packages/bokeh/server/static -type f,l -name <span style="color: #BA2121">&#39;*.js&#39;</span> -not -name <span style="color: #BA2121">&#39;*.min.js&#39;</span> -delete <span style="color: #666666">||</span> <span style="color: #008000">echo</span> <span style="color: #BA2121">&quot;no bokeh static files to cleanup&quot;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     <span style="color: #666666">&amp;&amp;</span> rm -rf /opt/conda/pkgs
 
-USER root
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> root</span>
 
 <span style="color: #408080; font-style: italic"># Create the /opt/app directory, and assert that Jupyter&#39;s NB_UID/NB_GID values</span>
 <span style="color: #408080; font-style: italic"># haven&#39;t changed.</span>
@@ -522,10 +522,10 @@ USER root
 
 <span style="color: #408080; font-style: italic"># Copy over the example as NB_USER. Unfortuantely we can&#39;t use $NB_UID/$NB_GID</span>
 <span style="color: #408080; font-style: italic"># in the `--chown` statement, so we need to hardcode these values.</span>
-COPY --chown<span style="color: #666666">=1000</span>:100 examples/ /home/<span style="color: #19177C">$NB_USER</span>/examples
-COPY prepare.sh /usr/bin/prepare.sh
+<span style="color: #008000; font-weight: bold">COPY</span> --chown<span style="color: #666666">=1000</span>:100 examples/ /home/<span style="color: #19177C">$NB_USER</span>/examples
+<span style="color: #008000; font-weight: bold">COPY</span> prepare.sh /usr/bin/prepare.sh
 
-<span style="color: #008000; font-weight: bold">ENTRYPOINT</span><span style="color: #BA2121"> [&quot;tini&quot;, &quot;--&quot;, &quot;/usr/bin/prepare.sh&quot;]</span></code></pre>
+<span style="color: #008000; font-weight: bold">ENTRYPOINT</span> [<span style="color: #BA2121">&quot;tini&quot;</span>, <span style="color: #BA2121">&quot;--&quot;</span>, <span style="color: #BA2121">&quot;/usr/bin/prepare.sh&quot;</span>]</code></pre>
 </div>
 </div>
 </div>
@@ -555,58 +555,58 @@ COPY prepare.sh /usr/bin/prepare.sh
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span>hub:
-  image:
-    name: holdenk/jupyter-hub-magichub
-proxy:
-  service:
-    type: NodePort
-  secretToken: DIFFERENTSECRET
-  secretSync:
-    image:
-      name: holdenk/jupyter-hub-magicsecret-sync
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  chp:
-    image:
-      name: holdenk/jconfigurable-http-proxy
-      tag: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
-ingress:
-  enabled: true
-  hosts:
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="yaml"><span></span><span style="color: #008000; font-weight: bold">hub</span>:
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magichub
+<span style="color: #008000; font-weight: bold">proxy</span>:
+  <span style="color: #008000; font-weight: bold">service</span>:
+    <span style="color: #008000; font-weight: bold">type</span>: NodePort
+  <span style="color: #008000; font-weight: bold">secretToken</span>: DIFFERENTSECRET
+  <span style="color: #008000; font-weight: bold">secretSync</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsecret-sync
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">chp</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jconfigurable-http-proxy
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.0.1&#39;</span>
+<span style="color: #008000; font-weight: bold">ingress</span>:
+  <span style="color: #008000; font-weight: bold">enabled</span>: true
+  <span style="color: #008000; font-weight: bold">hosts</span>:
     - holdenkarau.mooo.com
-  tls:
-   - hosts:
+  <span style="color: #008000; font-weight: bold">tls</span>:
+   - <span style="color: #008000; font-weight: bold">hosts</span>:
       - holdenkarau.mooo.com
-     secretName: k3s-mooo-tls
-singleuser:
-  serviceAccountName: dask
-  networkTools:
-    image:
-      name: holdenk/jupyter-hub-magicnetwork-tools
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  image:
-    name: holdenk/jupyter-hub-magicsingleuser-sample
-    tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
-  profileList:
-    - display_name: <span style="color: #BA2121">&quot;Minimal</span><span style="color: #19177C"> </span><span style="color: #BA2121">environment&quot;</span>
-      description: <span style="color: #BA2121">&quot;To</span><span style="color: #19177C"> </span><span style="color: #BA2121">avoid</span><span style="color: #19177C"> </span><span style="color: #BA2121">too</span><span style="color: #19177C"> </span><span style="color: #BA2121">much</span><span style="color: #19177C"> </span><span style="color: #BA2121">bells</span><span style="color: #19177C"> </span><span style="color: #BA2121">and</span><span style="color: #19177C"> </span><span style="color: #BA2121">whistles:</span><span style="color: #19177C"> </span><span style="color: #BA2121">Python.&quot;</span>
-      default: true
-    - display_name: <span style="color: #BA2121">&quot;Dask</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
-      description: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">dask&quot;</span>
-      kubespawner_override:
-        image: holdenk/dask-notebook:v0.9.4b
-prePuller:
-  hook:
-    image:
-      name: holdenk/jupyter-hub-magicimage-awaiter
-      tag: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+     <span style="color: #008000; font-weight: bold">secretName</span>: k3s-mooo-tls
+<span style="color: #008000; font-weight: bold">singleuser</span>:
+  <span style="color: #008000; font-weight: bold">serviceAccountName</span>: dask
+  <span style="color: #008000; font-weight: bold">networkTools</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicnetwork-tools
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">image</span>:
+    <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicsingleuser-sample
+    <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
+  <span style="color: #008000; font-weight: bold">profileList</span>:
+    - <span style="color: #008000; font-weight: bold">display_name</span>: <span style="color: #BA2121">&quot;Minimal</span><span style="color: #19177C"> </span><span style="color: #BA2121">environment&quot;</span>
+      <span style="color: #008000; font-weight: bold">description</span>: <span style="color: #008000; font-weight: bold">&quot;To avoid too much bells and whistles</span>: Python.&quot;
+      <span style="color: #008000; font-weight: bold">default</span>: true
+    - <span style="color: #008000; font-weight: bold">display_name</span>: <span style="color: #BA2121">&quot;Dask</span><span style="color: #19177C"> </span><span style="color: #BA2121">container&quot;</span>
+      <span style="color: #008000; font-weight: bold">description</span>: <span style="color: #BA2121">&quot;If</span><span style="color: #19177C"> </span><span style="color: #BA2121">you</span><span style="color: #19177C"> </span><span style="color: #BA2121">want</span><span style="color: #19177C"> </span><span style="color: #BA2121">to</span><span style="color: #19177C"> </span><span style="color: #BA2121">run</span><span style="color: #19177C"> </span><span style="color: #BA2121">dask&quot;</span>
+      <span style="color: #008000; font-weight: bold">kubespawner_override</span>:
+        <span style="color: #008000; font-weight: bold">image</span>: holdenk/dask-notebook:v0.9.4b
+<span style="color: #008000; font-weight: bold">prePuller</span>:
+  <span style="color: #008000; font-weight: bold">hook</span>:
+    <span style="color: #008000; font-weight: bold">image</span>:
+      <span style="color: #008000; font-weight: bold">name</span>: holdenk/jupyter-hub-magicimage-awaiter
+      <span style="color: #008000; font-weight: bold">tag</span>: <span style="color: #BA2121">&#39;0.10.2&#39;</span>
 <span style="color: #408080; font-style: italic"># Do something better here! It&#39;s being reworked though - https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1871</span>
-auth:
-  type: dummy
-  dummy:
-    password: <span style="color: #BA2121">&#39;mypassword&#39;</span>
-  whitelist:
-    users:
+<span style="color: #008000; font-weight: bold">auth</span>:
+  <span style="color: #008000; font-weight: bold">type</span>: dummy
+  <span style="color: #008000; font-weight: bold">dummy</span>:
+    <span style="color: #008000; font-weight: bold">password</span>: <span style="color: #BA2121">&#39;mypassword&#39;</span>
+  <span style="color: #008000; font-weight: bold">whitelist</span>:
+    <span style="color: #008000; font-weight: bold">users</span>:
       - user1
       - user2</code></pre>
 </div>

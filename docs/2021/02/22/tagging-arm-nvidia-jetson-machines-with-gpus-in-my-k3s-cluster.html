@@ -4,17 +4,19 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- seo --><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>About | Scaling Python ML</title>
+<title>Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster | Scaling Python ML</title>
 <meta name="generator" content="Jekyll v3.9.0" />
-<meta property="og:title" content="About" />
+<meta property="og:title" content="Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
-<meta property="og:description" content="Blog of my adventures working with different tools for scaling Python ML workloads." />
-<link rel="canonical" href="https://scalingpythonml.com/about.html" />
-<meta property="og:url" content="https://scalingpythonml.com/about.html" />
+<meta name="description" content="We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it&#8217;s important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in [my-cluster-img]. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I&#8217;ve got NVidia boards we&#8217;ll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips." />
+<meta property="og:description" content="We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it&#8217;s important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in [my-cluster-img]. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I&#8217;ve got NVidia boards we&#8217;ll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips." />
+<link rel="canonical" href="https://scalingpythonml.com/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html" />
+<meta property="og:url" content="https://scalingpythonml.com/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html" />
 <meta property="og:site_name" content="Scaling Python ML" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-02-22T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"WebPage","url":"https://scalingpythonml.com/about.html","headline":"About","description":"Blog of my adventures working with different tools for scaling Python ML workloads.","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html"},"url":"https://scalingpythonml.com/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html","headline":"Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster","dateModified":"2021-02-22T00:00:00-08:00","datePublished":"2021-02-22T00:00:00-08:00","description":"We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it&#8217;s important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in [my-cluster-img]. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I&#8217;ve got NVidia boards we&#8217;ll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -99,17 +101,89 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
 </header>
 <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <article class="post">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title">About</h1>
+    <h1 class="post-title p-name" itemprop="name headline">Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-02-22T00:00:00-08:00" itemprop="datePublished">Feb 22, 2021
+      </time></p>
   </header>
 
-  <div class="post-content">
-    <p>This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I’m involved with. I am one of the developers of Apache Spark <a href="https://amzn.to/2O6KYYH">and have some books published on the topic</a> that may influence my views, but my views do not represent the project.</p>
-
-  </div>
-
+  <div class="post-content e-content" itemprop="articleBody">
+    <div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>We previously setup the cluster with GPUs, but since we want to get into using GPU acceleration, it&#8217;s important to be able to request these resources from the Kubernetes scheduler. Tagging the nodes will help Kubernetes tell the different between the Raspbery Pi and Jetson Xavier in <a href="#my-cluster-img">[my-cluster-img]</a>. Depending on your type of GPUs there are options for automatically labeling your nodes. Since I&#8217;ve got NVidia boards we&#8217;ll use the k8s-device-plugin to do the labeling of the nodes. For our machines, though, the containers out of the box do not run on ARM and the code does not detect Jetson chips.</p>
+</div>
+<div id="my-cluster-img" class="imageblock">
+<div class="content">
+<img src="../images/pi-and-jetson-IMG_0629.jpg" alt="Image of Raspbery Pis on top with Jetson Xaviers down bellow">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_disabling-un-needed-checks">Disabling un-needed checks</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The Wind River folks have <a href="https://blogs.windriver.com/wind_river_blog/2020/06/nvidia-k8s-device-plugin-for-wind-river-linux/"> published a series of patches for NVidia</a> and instructions. You can apply these patches by running the commands in <a href="#pathc_ex">[pathc_ex]</a>.</p>
+</div>
+<div id="patch_ex" class="exampleblock">
+<div class="title">Example 1. Apply the Wind River patches to the ARM tagging.</div>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span>patch -p1 &lt; <span style="color: #666666">0001</span>-arm64-add-support-for-arm64-architectures.patch
+patch -p1 &lt; <span style="color: #666666">0002</span>-nvidia-Add-support-for-tegra-boards.patch</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>The third patch doesn&#8217;t quite apply cleanly, as the loading NVML code has changed a bit (namely, failOnInitErrorFlag has been added). However, if you take a look at the patch, you can manually apply it by looking for the "log.Println("Loading NVML")" statement and replacing that chunk of code with the new code (indicated by the +s in the patch file).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building-the-arm-image">Building the arm image</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Building the image with ARM support is now relatively simple. If you&#8217;re running on an ARM machine you can just build as normal, e.g. <code>docker build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 -f ./docker/arm64/Dockerfile.ubuntu16.04 .</code></p>
+</div>
+<div class="paragraph">
+<p>Otherwise, assuming you&#8217;ve set up cross-building, you can use buildx and just specify one platform, <code>docker buildx build -t holdenk/k8s-device-plugin-arm:v0.7.0.1 --platform linux/arm64 --push -f ./docker/arm64/Dockerfile.ubuntu16.04 .</code></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_building-a-multi-arch-image">Building a multi-arch image</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you have a mix of ARM and x86 machines in your cluster (as I do), having just an ARM image makes deployment a bit difficult. Thankfully we can update the Dockerfile to make it multi-arch by adding the <code>ARG TARGETARCH</code> and taking out the hardcoded arm64 references. For the <code>--platform=arm64</code> we can just go ahead and remove them, and for the wget, we can replace <code>arm64</code> with <code>${TARGETARCH}</code>.</p>
+</div>
+<div class="paragraph">
+<p>Now, assuming you&#8217;ve got your multi-arch Docker build environment set up, you can cross-build this with, <code>docker buildx build -t holdenk/k8s-device-plugin:v0.7.0.1 --platform linux/arm64,linux/amd64 --push -f ./docker/multi/Dockerfile.ubuntu16.04 .</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_updating-the-yaml-deploying">Updating the YAML &amp; deploying.</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Once you&#8217;ve built your container image, you&#8217;ll need to update the image in <code>nvidia-device-plugin.yml</code> to point to your custom version. You can then deploy it with <code>kubectl apply -f nvidia-device-plugin.yml</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_conclusion">Conclusion</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Tagging your nodes with GPU resources is an important part of being able to take advantage of your cluster resources. While the NVidia tagger does not yet support Jetson boards out of the box, there are only a few small patches needed to get it working.</p>
+</div>
+</div>
+</div>
+  </div><a class="u-url" href="/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html" hidden></a>
 </article>
 
       </div>
