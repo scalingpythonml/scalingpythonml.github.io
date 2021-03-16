@@ -88,7 +88,7 @@ With jconfigurable-http-proxy no changes are necessary to the project it's self,
 
 === Configuring the container images
 
-Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link:$$https://v2.helm.sh/docs/chart_repository/$$[chart repository] or you can use the existing published helm chart and override the images.
+Now that you've built the container images, we need to configure our helm chart to use them. When you run `chartpress` inside of the zero-to-jupyterhub-k8s repo, it updates the jupyterhub values for the helm chart. You can either use this new chart by following the helm instruction on using a link:$$https://v2.helm.sh/docs/chart_repository/$$[chart repository] (e.g. `helm install    $RELEASE ~/repos/scalingpythonml/scratch/zero-to-jupyterhub-k8s/jupyterhub   --namespace $NAMESPACE   --create-namespace       --values config.yaml`) or you can use the existing published helm chart and override the images.
 
 
 To install with the existing published chart you can run <<install_existing>>.
@@ -120,7 +120,7 @@ We'll keep building on the above configuration, since we need to do more than ju
 
 == Setting up a SSL Certificate
 
-Jupyter expects an SSL certificate for its endpoint. If you don't have cert manager installed, the guide at link:$$https://opensource.com/article/20/3/ssl-letsencrypt-k3s$$[https://opensource.com/article/20/3/ssl-letsencrypt-k3s shows how to configure SSL using Let's Encrypt]. If you don't have a publicly accessible IP and domain, you'll need to use an alternative provider. Once you have cert-manager installed it's time to request the certificate. The YAML for my certificate request for`holdenkarau.mooo.com` is shown in <<cert-req>>.
+Jupyter expects an SSL certificate for its endpoint. If you don't have cert manager installed, the guide at link:$$https://opensource.com/article/20/3/ssl-letsencrypt-k3s$$[https://opensource.com/article/20/3/ssl-letsencrypt-k3s shows how to configure SSL using Let's Encrypt]. If you don't have a publicly accessible IP and domain, you'll need to use an alternative provider. Once you have cert-manager installed it's time to request the certificate. The YAML for my certificate request for holdenkarau.mooo.com is shown in <<cert-req>>.
 
 [[cert-req]]
 ====
