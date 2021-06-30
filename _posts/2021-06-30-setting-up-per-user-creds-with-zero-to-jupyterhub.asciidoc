@@ -1,4 +1,4 @@
-= Setting up Per User Secrets & other customizations with Jupyterhub on Kubernetes
+= Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes
 
 While we've already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don't accidentally stomp on each-others work.
 
