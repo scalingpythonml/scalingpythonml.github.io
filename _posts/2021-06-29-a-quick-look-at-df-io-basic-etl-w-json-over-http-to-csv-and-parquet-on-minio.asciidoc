@@ -142,7 +142,7 @@ df.head()
 Note the result of doing this (in IPython/Jupyter) is displayed using the normal pandas display logic, resulting in a nice image <<dfheadimg>>.
 
 [[dfheadimg]]
-image::../images/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio-df-head.png[Image of Dataframe display in the notebook]
+image::/images/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio-df-head.png[Image of Dataframe display in the notebook]
 
 If you've called `df.head` in Spark, you'll note this is a much nicer default view. That being said the data needs a bit of cleaning up.
 
