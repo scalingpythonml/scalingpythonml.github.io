@@ -6,20 +6,9 @@ USER root
 # Use multiple cores to compile the C code :)
 ENV MAKEFLAGS -j 4
 
-
 RUN set -eux; \
     apt-get update && \
     apt-get install -yq graphviz git build-essential cmake telnet && \
-    ln -s /lib /lib64 && \
-    apt install -y bash tini libc6 libpam-modules krb5-user libnss3 procps ca-certificates p11-kit wget bzip2 git mercurial subversion && \
-    mkdir -p /opt/spark && \
-    mkdir -p /opt/spark/examples && \
-    mkdir -p /opt/spark/work-dir && \
-    touch /opt/spark/RELEASE && \
-    rm /bin/sh && \
-    ln -sv /bin/bash /bin/sh && \
-    echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
-    chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
     conda install -c conda-forge --yes mamba && \
     mamba install --yes python==3.8.6 && \
     pip install --upgrade pip setuptools && \
@@ -29,9 +18,6 @@ RUN set -eux; \
     rm -rf /var/cache/apt/* && \
     rm -rf /var/lib/apt/lists/* && \
     echo -e "$NB_USER\n$NB_USER" | passwd $NB_USER
-
-
-
 # Based on https://github.com/docker-library/openjdk/blob/master/11/jdk/slim-buster/Dockerfile
 
 # Default to UTF-8 file.encoding
@@ -123,56 +109,71 @@ RUN set -eux; \
 	javac --version; \
 	java --version
 
+# Based on the Flink dockerfile
+# Install dependencies
+RUN set -ex; \
+  apt-get update; \
+  apt-get -y install libsnappy1v5 gettext-base libjemalloc-dev; \
+  rm -rf /var/lib/apt/lists/*
 
-# Based on the Spark dockerfile
+# Grab gosu for easy step-down from root
+ENV GOSU_VERSION 1.11
+RUN set -ex; \
+  wget -nv -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)"; \
+  wget -nv -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc"; \
+  export GNUPGHOME="$(mktemp -d)"; \
+  for server in ha.pool.sks-keyservers.net $(shuf -e \
+			  hkp://p80.pool.sks-keyservers.net:80 \
+			  keyserver.ubuntu.com \
+			  hkp://keyserver.ubuntu.com:80 \
+			  pgp.mit.edu) ; do \
+      gpg --batch --keyserver "$server" --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 && break || : ; \
+  done && \
+  gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu; \
+  gpgconf --kill all; \
+  rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc; \
+  chmod +x /usr/local/bin/gosu; \
+  gosu nobody true
 
-COPY jars /opt/spark/jars
-COPY bin /opt/spark/bin
-COPY sbin /opt/spark/sbin
-COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
-# Wildcard so it covers decom.sh present (3.1+) and not present (pre-3.1)
-COPY kubernetes/dockerfiles/spark/decom.sh* /opt/
-COPY examples /opt/spark/examples
-COPY kubernetes/tests /opt/spark/tests
-COPY data /opt/spark/data
-# We need to copy over the license file so we can pip install PySpark
-COPY LICENSE /opt/spark/LICENSE
-COPY licenses /opt/spark/licenses
+# Configure Flink version
+ENV FLINK_TGZ_URL=https://www.apache.org/dyn/closer.cgi?action=download&filename=flink/flink-1.12.1/flink-1.12.1-bin-scala_2.12.tgz \
+    FLINK_ASC_URL=https://www.apache.org/dist/flink/flink-1.12.1/flink-1.12.1-bin-scala_2.12.tgz.asc \
+    GPG_KEY=F8E419AA0B60C28879E876859DFF40967ABFC5A4 \
+    CHECK_GPG=true
 
-ENV SPARK_HOME /opt/spark
+# Prepare environment
+ENV FLINK_HOME=/opt/flink
+ENV PATH=$FLINK_HOME/bin:$PATH
+# Leave the workdir alone for magic with saving the env
+#WORKDIR $FLINK_HOME
 
-# Note: don't change the workdir since then your Jupyter notebooks won't persist.
-RUN chmod g+w /opt/spark/work-dir
-# Wildcard so it covers decom.sh present (3.1+) and not present (pre-3.1)
-RUN chmod a+x /opt/decom.sh* || echo "No decom script present, assuming pre-3.1"
+# Install Flink
+RUN set -ex; \
+  wget -nv -O flink.tgz "$FLINK_TGZ_URL"; \
+  \
+  if [ "$CHECK_GPG" = "true" ]; then \
+    wget -nv -O flink.tgz.asc "$FLINK_ASC_URL"; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    for server in ha.pool.sks-keyservers.net $(shuf -e \
+			    hkp://p80.pool.sks-keyservers.net:80 \
+			    keyserver.ubuntu.com \
+			    hkp://keyserver.ubuntu.com:80 \
+			    pgp.mit.edu) ; do \
+	gpg --batch --keyserver "$server" --recv-keys "$GPG_KEY" && break || : ; \
+    done && \
+    gpg --batch --verify flink.tgz.asc flink.tgz; \
+    gpgconf --kill all; \
+    rm -rf "$GNUPGHOME" flink.tgz.asc; \
+  fi; \
+  \
+  tar -xf flink.tgz --strip-components=1; \
+  rm flink.tgz; \
+  \
+  chown -R $NB_USER:$NB_USER .;
 
-# Copy pyspark with setup files and everything
-COPY python ${SPARK_HOME}/python
+# install Python Flink
 
-# Add PySpark to PYTHON_PATH
-
-RUN pip install -e ${SPARK_HOME}/python
-
-# Add S3A support
-ADD https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.563/aws-java-sdk-bundle-1.11.563.jar ${SPARK_HOME}/jars/
-ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar ${SPARK_HOME}/jars/
-
-#tag::iceberg[]
-ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-runtime/0.11.0/iceberg-spark3-runtime-0.11.0.jar ${SPARK_HOME}/jars/
-ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-extensions/0.11.0/iceberg-spark3-extensions-0.11.0.jar ${SPARK_HOME}/jars/
-ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3/0.11.0/iceberg-spark3-0.11.0.jar ${SPARK_HOME}/jars/
-#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-parquet/0.11.0/iceberg-parquet-0.11.0.jar ${SPARK_HOME}/jars/
-#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-core/0.11.0/iceberg-core-0.11.0.jar ${SPARK_HOME}/jars/
-#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-arrow/0.11.0/iceberg-arrow-0.11.0.jar ${SPARK_HOME}/jars/
-#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-data/0.11.0/iceberg-data-0.11.0.jar ${SPARK_HOME}/jars/
-#end::iceberg[]
-
-RUN chmod a+rx ${SPARK_HOME}/jars/*.jar 
-
+RUN pip3 install apache-flink[==1.12.0]
 
 # Switch to the user back to a non-root user that will actually do the running
 USER $NB_USER
-
-# Should match the service
-EXPOSE 2222
-EXPOSE 7777
