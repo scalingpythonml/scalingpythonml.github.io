@@ -1,0 +1,19 @@
+= Setting up Per User Secrets & other customizations with Jupyterhub on Kubernetes
+
+While we've already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don't accidentally stomp on each-others work.
+
+
+In Kubernetes the main way of doing this is with service accounts and secrets.
+While we can configure this globally, configuring this per-user needs a bit of custom code.
+
+
+[source, yaml]
+----
+include::../subrepos/jupyter/scalingpythonml/multiuser.yaml[]
+----
+
+
+Most of the magic is inside `preSpawnHook`. This also uses the `z2jh` library to allow it to load the config in `custom.users` in the YAML file. You could also point this to a database or something else, but given I've got about three users I figured in-line YAML was good enough for my case.
+
+
+I'd like to thank https://github.com/consideRatio[consideRatio] for all his help, to be clear any mistakes are my own fault.
