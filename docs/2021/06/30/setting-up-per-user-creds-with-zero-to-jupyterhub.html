@@ -4,9 +4,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- seo --><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>Setting up Per User Secrets &amp; other customizations with Jupyterhub on Kubernetes | Scaling Python ML</title>
+<title>Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes | Scaling Python ML</title>
 <meta name="generator" content="Jekyll v3.9.0" />
-<meta property="og:title" content="Setting up Per User Secrets &amp; other customizations with Jupyterhub on Kubernetes" />
+<meta property="og:title" content="Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="While we&#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&#8217;t accidentally stomp on each-others work." />
 <meta property="og:description" content="While we&#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&#8217;t accidentally stomp on each-others work." />
@@ -16,7 +16,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2021-06-30T00:00:00-07:00" />
 <script type="application/ld+json">
-{"datePublished":"2021-06-30T00:00:00-07:00","dateModified":"2021-06-30T00:00:00-07:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html"},"url":"https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html","description":"While we&#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&#8217;t accidentally stomp on each-others work.","headline":"Setting up Per User Secrets &amp; other customizations with Jupyterhub on Kubernetes","@context":"https://schema.org"}</script>
+{"datePublished":"2021-06-30T00:00:00-07:00","dateModified":"2021-06-30T00:00:00-07:00","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html"},"url":"https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html","description":"While we&#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&#8217;t accidentally stomp on each-others work.","headline":"Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -104,7 +104,7 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">Setting up Per User Secrets &amp;amp; other customizations with Jupyterhub on Kubernetes</h1>
+    <h1 class="post-title p-name" itemprop="name headline">Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes</h1>
     <p class="post-meta">
       <time class="dt-published" datetime="2021-06-30T00:00:00-07:00" itemprop="datePublished">Jun 30, 2021
       </time></p>
