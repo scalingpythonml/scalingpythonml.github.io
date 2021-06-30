@@ -16,7 +16,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-12-21T00:00:00-08:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html"},"url":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html","headline":"Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)","dateModified":"2020-12-21T00:00:00-08:00","datePublished":"2020-12-21T00:00:00-08:00","description":"Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven&#8217;t.","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","headline":"Running Spark Jupyter Notebooks Client Mode inside of a Kubernetes Cluster (with ARM for Extra Fun)","dateModified":"2020-12-21T00:00:00-08:00","datePublished":"2020-12-21T00:00:00-08:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html"},"url":"https://scalingpythonml.com/2020/12/21/running-a-spark-jupyter-notebooks-in-client-mode-inside-of-a-kubernetes-cluster-on-arm.html","description":"Having your Spark Notebook inside the same cluster as the executors can reduce network errors and improve uptime. Since these network issues can result in job failure, this is an important consideration. This post assumes that you&#8217;ve already set up the foundation JupyterHub inside of Kubernetes deployment; the Dask-distributed notebook blog post covers that if you haven&#8217;t.","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -161,12 +161,15 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span><span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> ! -f spark-3.0.1-bin-hadoop3.2.tgz <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span>
-  axel https://ftp.wayne.edu/apache/spark/spark-3.0.1/spark-3.0.1-bin-hadoop3.2.tgz
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span><span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> ! -f spark-3.1.1-bin-hadoop3.2.tgz <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span>
+  axel https://ftp.wayne.edu/apache/spark/spark-3.1.1/spark-3.1.1-bin-hadoop3.2.tgz
 <span style="color: #008000; font-weight: bold">fi</span>
-<span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> ! -d spark-3.0.1-bin-hadoop3.2 <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span>
-  tar -xvf spark-3.0.1-bin-hadoop3.2.tgz
-<span style="color: #008000; font-weight: bold">fi</span></code></pre>
+rm -rf spark-3.1.1-bin-hadoop-3.2
+<span style="color: #008000; font-weight: bold">if</span> <span style="color: #666666">[</span> ! -d spark-3.1.1-bin-hadoop3.2 <span style="color: #666666">]</span>; <span style="color: #008000; font-weight: bold">then</span>
+  tar -xvf spark-3.1.1-bin-hadoop3.2.tgz
+<span style="color: #008000; font-weight: bold">fi</span>
+<span style="color: #408080; font-style: italic"># Set SPARK_HOME to extracted directory</span>
+<span style="color: #19177C">SPARK_HOME</span><span style="color: #666666">=</span><span style="color: #BA2121">`</span><span style="color: #008000">pwd</span><span style="color: #BA2121">`</span>/spark-3.1.1-bin-hadoop3.2</code></pre>
 </div>
 </div>
 </div>
@@ -190,7 +193,7 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121">  holdenk/jupyter-hub-magicsingleuser-sample:0.10.2</span>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="dockerfile"><span></span><span style="color: #008000; font-weight: bold">FROM</span><span style="color: #BA2121"> holdenk/jupyter-hub-magicsingleuser-sample:0.10.2-n412.h25a21283</span>
 
 <span style="color: #408080; font-style: italic"># Switch to root to install stuff</span>
 <span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> root</span>
@@ -345,8 +348,29 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
 
 <span style="color: #008000; font-weight: bold">RUN</span> pip install -e <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python
 
+<span style="color: #408080; font-style: italic"># Add S3A support</span>
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.563/aws-java-sdk-bundle-1.11.563.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+
+<span style="color: #408080; font-style: italic">#tag::iceberg[]</span>
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-runtime/0.11.0/iceberg-spark3-runtime-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-extensions/0.11.0/iceberg-spark3-extensions-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3/0.11.0/iceberg-spark3-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-parquet/0.11.0/iceberg-parquet-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-core/0.11.0/iceberg-core-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-arrow/0.11.0/iceberg-arrow-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-data/0.11.0/iceberg-data-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#end::iceberg[]</span>
+
+<span style="color: #008000; font-weight: bold">RUN</span> chmod a+rx <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/*.jar 
+
+
 <span style="color: #408080; font-style: italic"># Switch to the user back to a non-root user that will actually do the running</span>
-<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> $NB_USER</span></code></pre>
+<span style="color: #008000; font-weight: bold">USER</span><span style="color: #BA2121"> $NB_USER</span>
+
+<span style="color: #408080; font-style: italic"># Should match the service</span>
+<span style="color: #008000; font-weight: bold">EXPOSE</span><span style="color: #BA2121"> 2222</span>
+<span style="color: #008000; font-weight: bold">EXPOSE</span><span style="color: #BA2121"> 7777</span></code></pre>
 </div>
 </div>
 </div>
@@ -362,7 +386,7 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span>docker buildx build -t holdenk/spark-notebook:v3.0.1.2  --platform linux/arm64,linux/amd64 --push .</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span>docker buildx build -t holdenk/spark-notebook:v<span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_VERSION</span><span style="color: #BB6688; font-weight: bold">}</span>  --platform linux/arm64,linux/amd64 --push .</code></pre>
 </div>
 </div>
 </div>
@@ -444,6 +468,26 @@ A lot of my blog posts come out of my <a href="https://www.youtube.com/user/hold
     mamba install --yes <span style="color: #19177C">numpy</span><span style="color: #666666">==1</span>.19.2 pandas cytoolz numba lz4 scikit-build python-blosc<span style="color: #666666">=1</span>.9.2 <span style="color: #666666">&amp;&amp;</span> <span style="color: #BB6622; font-weight: bold">\</span>
     <span style="color: #666666">(</span>mamba install --yes pyarrow <span style="color: #666666">||</span>  pip install -vvv pyarrow<span style="color: #666666">)</span>
 
+<span style="color: #408080; font-style: italic"># s3a support</span>
+<span style="color: #408080; font-style: italic">#tag::s3a[]</span>
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.563/aws-java-sdk-bundle-1.11.563.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #408080; font-style: italic">#end::s3a[]</span>
+
+<span style="color: #408080; font-style: italic">#tag::iceberg[]</span>
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-runtime/0.11.0/iceberg-spark3-runtime-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3-extensions/0.11.0/iceberg-spark3-extensions-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #008000; font-weight: bold">ADD</span> https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark3/0.11.0/iceberg-spark3-0.11.0.jar <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-parquet/0.11.0/iceberg-parquet-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-core/0.11.0/iceberg-core-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-arrow/0.11.0/iceberg-arrow-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#ADD https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-data/0.11.0/iceberg-data-0.11.0.jar ${SPARK_HOME}/jars/</span>
+<span style="color: #408080; font-style: italic">#end::iceberg[]</span>
+
+<span style="color: #408080; font-style: italic">#tag::perms[]</span>
+<span style="color: #008000; font-weight: bold">RUN</span> chmod a+rx <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/jars/*.jar
+<span style="color: #408080; font-style: italic">#end::perms[]</span>
+
 
 <span style="color: #008000; font-weight: bold">COPY</span> python/pyspark <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/pyspark
 <span style="color: #008000; font-weight: bold">COPY</span> python/lib <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/python/lib
@@ -505,11 +549,11 @@ find /opt/conda/ -follow -type f -name <span style="color: #BA2121">&#39;*.js.ma
 <div class="listingblock">
 <div class="content">
 <pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span><span style="color: #408080; font-style: italic"># Copy over python setup script so we can have matching pythons</span>
-cp pysetup.sh ./spark-3.0.1-bin-hadoop3.2/bin/
-<span style="color: #008000">pushd</span> spark-3.0.1-bin-hadoop3.2
-<span style="color: #19177C">SPARK_HOME</span><span style="color: #666666">=</span><span style="color: #BA2121">`</span><span style="color: #008000">pwd</span><span style="color: #BA2121">`</span>
+<span style="color: #19177C">SPARK_VERSION</span><span style="color: #666666">=3</span>.1.1.11
+cp pysetup.sh <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>/bin/
+<span style="color: #008000">pushd</span> <span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_HOME</span><span style="color: #BB6688; font-weight: bold">}</span>
 <span style="color: #19177C">SPARK_ROOT</span><span style="color: #666666">=</span><span style="color: #BA2121">&quot;</span><span style="color: #19177C">$SPARK_HOME</span><span style="color: #BA2121">&quot;</span>
-./bin/docker-image-tool.sh  -r holdenk -t v3.0.1.2 -X -b <span style="color: #19177C">java_image_tag</span><span style="color: #666666">=11</span>-jre-slim -p PyDockerfile Dockerfile build</code></pre>
+./bin/docker-image-tool.sh  -r holdenk -t v<span style="color: #BB6688; font-weight: bold">${</span><span style="color: #19177C">SPARK_VERSION</span><span style="color: #BB6688; font-weight: bold">}</span> -X -b <span style="color: #19177C">java_image_tag</span><span style="color: #666666">=11</span>-jre-slim -p PyDockerfile Dockerfile build</code></pre>
 </div>
 </div>
 </div>
@@ -580,7 +624,8 @@ spec:
     - name: blockmanager
       protocol: TCP
       port: <span style="color: #666666">7777</span>
-      targetPort: <span style="color: #666666">7777</span></code></pre>
+      targetPort: <span style="color: #666666">7777</span>
+  type: ClusterIP</code></pre>
 </div>
 </div>
 </div>
@@ -590,7 +635,7 @@ spec:
 <div class="content">
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span>kubectl create service -n jhub driver-service.yaml</code></pre>
+<pre class="pygments highlight" style="background: #f8f8f8;"><code data-lang="bash"><span></span>kubectl apply -n jhub -f driver-service.yaml</code></pre>
 </div>
 </div>
 </div>

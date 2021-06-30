@@ -14,7 +14,7 @@
 <meta property="og:url" content="https://scalingpythonml.com/" />
 <meta property="og:site_name" content="Scaling Python ML" />
 <script type="application/ld+json">
-{"@type":"WebSite","url":"https://scalingpythonml.com/","headline":"Scaling Python ML","description":"Blog of my adventures working with different tools for scaling Python ML workloads.","name":"Scaling Python ML","@context":"https://schema.org"}</script>
+{"@type":"WebSite","headline":"Scaling Python ML","url":"https://scalingpythonml.com/","description":"Blog of my adventures working with different tools for scaling Python ML workloads.","name":"Scaling Python ML","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <!-- end seo -->
   <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -103,7 +103,14 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
 
 <h2 id="scaling-python-ml">Scaling Python ML</h2>
 <h2 class="post-list-heading">Posts</h2>
-    <ul class="post-list"><li><span class="post-meta">Feb 22, 2021</span>
+    <ul class="post-list"><li><span class="post-meta">Jun 29, 2021</span>
+        <h3>
+          <a class="post-link" href="/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio.html">
+            A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO)
+          </a>
+        </h3><div class="paragraph">
+<p>Now that we&#8217;ve got Dask installed, it&#8217;s time to try some simple data preparation and extract, transform, load(ETL). While ETL is often not the most exciting thing, getting data is the first step of most adventures. Data tools don&#8217;t exist in a vacuum; the data normally comes from somewhere else, and the data or models we make need to be useable with other tools. Because of this, the formats and systems that a tool can interact with can make a difference between it being a fit or needing to keep looking. To simplify your life with I/O, you should make sure your notebook (or client) runs inside the same cluster as the workers.</p>
+</div></li><li><span class="post-meta">Feb 22, 2021</span>
         <h3>
           <a class="post-link" href="/2021/02/22/tagging-arm-nvidia-jetson-machines-with-gpus-in-my-k3s-cluster.html">
             Tagging my ARM NVidia Jetson machines with GPUs in my Kubernetes (k3s) cluster
