@@ -1,4 +1,4 @@
-= A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO)
+= A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask
 
 Now that we've got Dask installed, it's time to try some simple data preparation and extract, transform, load(ETL). While ETL is often not the most exciting thing, getting data is the first step of most adventures. Data tools don't exist in a vacuum; the data normally comes from somewhere else, and the data or models we make need to be useable with other tools. Because of this, the formats and systems that a tool can interact with can make a difference between it being a fit or needing to keep looking. To simplify your life with I/O, you should make sure your notebook (or client) runs inside the same cluster as the workers.
 
