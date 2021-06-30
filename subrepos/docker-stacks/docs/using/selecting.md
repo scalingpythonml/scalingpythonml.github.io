@@ -28,7 +28,7 @@ and versioning strategy.
 [options common across all core stacks](common.md). It is the basis for all other stacks.
 
 - Minimally-functional Jupyter Notebook server (e.g., no LaTeX support for saving notebooks as PDFs)
-- [Miniconda](https://conda.io/miniconda.html) Python 3.x in `/opt/conda`
+- [Miniforge](https://github.com/conda-forge/miniforge) Python 3.x in `/opt/conda`
 - No preinstalled scientific computing packages
 - Unprivileged user `jovyan` (`uid=1000`, configurable, see options) in group `users` (`gid=100`)
   with ownership over the `/home/jovyan` and `/opt/conda` paths
@@ -48,8 +48,8 @@ and versioning strategy.
 
 - Everything in `jupyter/base-notebook`
 - [TeX Live](https://www.tug.org/texlive/) for notebook document conversion
-- [git](https://git-scm.com/), [emacs](https://www.gnu.org/software/emacs/) (actually `emacs-nox`),
-  [vi](https://vim.org/) (actually `vim-tiny`), [jed](https://www.jedsoft.org/jed/),
+- [git](https://git-scm.com/),
+  [vi](https://vim.org/) (actually `vim-tiny`),
   [nano](https://www.nano-editor.org/) (actually `nano-tiny`), tzdata, and unzip
 
 ### jupyter/r-notebook
@@ -240,6 +240,11 @@ core images and link them below.
   Docker Stack image. The image includes major geospatial Python & R libraries on top of the
   datascience-notebook image. Try it on
   binder:[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/SCiO-systems/cgspatial-notebook/master)
+
+- [kotlin-notebook](https://github.com/knonm/kotlin-notebook) is a community Jupyter
+  Docker Stack image. The image includes [Kotlin kernel for Jupyter/IPython](https://github.com/Kotlin/kotlin-jupyter) on top of the
+  `base-notebook` image. Try it on
+  Binder: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/knonm/kotlin-notebook/main)
 
 See the [contributing guide](../contributing/stacks.md) for information about how to create your own
 Jupyter Docker Stack.

@@ -10,17 +10,14 @@ USER root
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get update && apt-get install -yq --no-install-recommends \
     build-essential \
-    emacs-nox \
     vim-tiny \
     git \
     inkscape \
-    jed \
     libsm6 \
     libxext-dev \
     libxrender1 \
     lmodern \
     netcat \
-    python-dev \
     # ---- nbconvert dependencies ----
     texlive-xetex \
     texlive-fonts-recommended \
@@ -32,7 +29,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create alternative for nano -> nano-tiny
-RUN update-alternatives --install /usr/bin/nano nano /usr/bin/nano-tiny 10
+RUN update-alternatives --install /usr/bin/nano nano /bin/nano-tiny 10
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER $NB_UID
