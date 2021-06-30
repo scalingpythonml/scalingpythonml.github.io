@@ -9,7 +9,7 @@ While we can configure this globally, configuring this per-user needs a bit of c
 
 [source, yaml]
 ----
-include::../subrepos/jupyter/scalingpythonml/multiuser.yaml[]
+include::../subrepos/scalingpythonml/jupyter/multiuser.yaml[]
 ----
 
 
