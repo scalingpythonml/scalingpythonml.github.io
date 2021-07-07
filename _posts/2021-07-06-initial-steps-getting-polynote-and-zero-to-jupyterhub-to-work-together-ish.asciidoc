@@ -69,11 +69,11 @@ Unfortunately, while Polynote has support for being served by reverse proxies at
 
 
 
-All in all the (not very nice, but serviceable) integration is on my GitHub Polynote integrate-with-zero-to-jupyterhub branch.
+All in all the (not very nice, but serviceable) integration is on my https://github.com/holdenk/polynote/tree/integrate-with-zero-to-jupyterhub[GitHub Polynote integrate-with-zero-to-jupyterhub branch].
 
 
 
-In addition, while I was working on this I found various issues with the Polynote Dockerfile & build instructions not being in sync. This is pretty normal, but since I was new to the project I took several miss-steps, but I've submitted some upstream PRs (including some merged) to clarify the issues for others.
+In addition, while I was working on this I found various issues with the Polynote Dockerfile and build instructions not being in sync. This is pretty normal, but since I was new to the project I took several miss-steps, but I've submitted some PRs (including some merged) to clarify the issues for others.
 
 
 
