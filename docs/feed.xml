@@ -1,118 +1,91 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2021-06-30T12:17:35-07:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes</title><link href="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html" rel="alternate" type="text/html" title="Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes" /><published>2021-06-30T00:00:00-07:00</published><updated>2021-06-30T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html">&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;While we&amp;#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&amp;#8217;t accidentally stomp on each-others work.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2021-07-06T22:00:02-07:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)</title><link href="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html" rel="alternate" type="text/html" title="Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)" /><published>2021-07-06T00:00:00-07:00</published><updated>2021-07-06T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish</id><content type="html" xml:base="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html">&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp;amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp;amp; Python), I figured I&amp;#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&amp;#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don&amp;#8217;t have security set up.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;In Kubernetes the main way of doing this is with service accounts and secrets.
-While we can configure this globally, configuring this per-user needs a bit of custom code.&lt;/p&gt;
+&lt;p&gt;The first step I did was creating a new Dockerfile for JupyterHub to launch so that we could put any customizations needed inside of it. We could view this Dockerfile as &quot;foreshadowing&quot; for the other changes I&amp;#8217;m going to describe:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class=&quot;listingblock&quot;&gt;
 &lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;debug:
-  enabled: true
-custom:
-  users:
-    holdenk:
-      secrets:
-        - env_name: MINIO_ACCESS_KEY
-          secret_name: minio
-          secret_key: accessKey
-        - env_name: MINIO_SECRET_KEY
-          secret_name: minio
-          secret_key: secretKey
-      service_account: holdenk
-hub:
-  extraConfig:
-      preSpawnHook: |
-        &lt;span style=&quot;color: #880000&quot;&gt;import z2jh&lt;/span&gt;
-        &lt;span style=&quot;color: #880000&quot;&gt;async def my_pre_spawn_hook(spawner):&lt;/span&gt;
-            &lt;span style=&quot;color: #880000&quot;&gt;users = z2jh.get_config(&amp;#39;custom.users&amp;#39;) or {}&lt;/span&gt;
-            &lt;span style=&quot;color: #880000&quot;&gt;username = spawner.user.name&lt;/span&gt;
-            &lt;span style=&quot;color: #880000&quot;&gt;if username in users:&lt;/span&gt;
-                &lt;span style=&quot;color: #880000&quot;&gt;user = users[username]&lt;/span&gt;
-                &lt;span style=&quot;color: #880000&quot;&gt;print(user)&lt;/span&gt;
-                &lt;span style=&quot;color: #880000&quot;&gt;if &amp;#39;service_account&amp;#39; in user:&lt;/span&gt;
-                    &lt;span style=&quot;color: #880000&quot;&gt;spawner.service_account = user[&amp;#39;service_account&amp;#39;]&lt;/span&gt;
-                &lt;span style=&quot;color: #880000&quot;&gt;if &amp;#39;secrets&amp;#39; in user:&lt;/span&gt;
-                    &lt;span style=&quot;color: #880000&quot;&gt;secrets = user[&amp;#39;secrets&amp;#39;]&lt;/span&gt;
-                    &lt;span style=&quot;color: #880000&quot;&gt;for secret in secrets:&lt;/span&gt;
-                        &lt;span style=&quot;color: #880000&quot;&gt;name = secret[&amp;#39;env_name&amp;#39;]&lt;/span&gt;
-                        &lt;span style=&quot;color: #880000&quot;&gt;spawner.env[name] = {&lt;/span&gt;
-                                &lt;span style=&quot;color: #880000&quot;&gt;&amp;#39;valueFrom&amp;#39;: {&lt;/span&gt;
-                                    &lt;span style=&quot;color: #880000&quot;&gt;&amp;#39;secretKeyRef&amp;#39;: {&lt;/span&gt;
-                                        &lt;span style=&quot;color: #880000&quot;&gt;&amp;#39;name&amp;#39;: secret[&amp;#39;secret_name&amp;#39;],&lt;/span&gt;
-                                        &lt;span style=&quot;color: #880000&quot;&gt;&amp;#39;key&amp;#39;: secret[&amp;#39;secret_key&amp;#39;]&lt;/span&gt;
-                                    &lt;span style=&quot;color: #880000&quot;&gt;}&lt;/span&gt;
-                                &lt;span style=&quot;color: #880000&quot;&gt;}&lt;/span&gt;
-                            &lt;span style=&quot;color: #880000&quot;&gt;}&lt;/span&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; holdenk/polynote:dev&lt;/span&gt;
 
-        &lt;span style=&quot;color: #880000&quot;&gt;c.KubeSpawner.pre_spawn_hook = my_pre_spawn_hook&lt;/span&gt;
-  config:
-    GitHubOAuthenticator:
-      client_id: YOURSECRET
-      client_secret: YOURSECRET
-      oauth_callback_url: YOURURL
-      allowed_organizations:
-        - scalingpythonml
-      scope:
-        - read:user
-    Authenticator:
-      admin_users:
-        - holdenk
-    JupyterHub:
-      authenticator_class: github
-ingress:
-  enabled: true
-  annotations:
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# With traefik 2+ this makes SSL only.&lt;/span&gt;
-    traefik.ingress.kubernetes.io/router.entrypoints: web, websecure
-    traefik.ingress.kubernetes.io/router.tls: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;true&amp;quot;&lt;/span&gt;
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#    kubernetes.io/tls-acme: &amp;quot;true&amp;quot;&lt;/span&gt;
-  hosts:
-    - jupyter.pigscanfly.ca
-  tls:
-   - hosts:
-      - jupyter.pigscanfly.ca
-     secretName: k3s-jupyter-tls
-singleuser:
-  memory:
-    limit: 10G
-    guarantee: 10G
-  cpu:
-    limit: 4
-    guarantee: 1
-  profileList:
-    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Minimal&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;environment&amp;quot;&lt;/span&gt;
-      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;To&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;avoid&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;too&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;much&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;bells&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;and&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;whistles:&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Python.&amp;quot;&lt;/span&gt;
-      default: true
-    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Dask&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;container&amp;quot;&lt;/span&gt;
-      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;dask&amp;quot;&lt;/span&gt;
-      kubespawner_override:
-        image: holdenk/dask-notebook:2020.1.1
-    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Spark&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;3.1.1.11&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;container&amp;quot;&lt;/span&gt;
-      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Spark&amp;quot;&lt;/span&gt;
-      kubespawner_override:
-        image: holdenk/spark-notebook:v3.1.1.11
-    - display_name: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Ray&amp;quot;&lt;/span&gt;
-      description: &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;If&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;you&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;want&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;to&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;run&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt; &lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;Ray&amp;quot;&lt;/span&gt;
-      kubespawner_override:
-        image: holdenk/ray-ray-nb:nightly
-prePuller:
-  continuous:
-    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# I&amp;#39;ve got a bunch of images that I use rarely&lt;/span&gt;
-    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# in &amp;quot;real life&amp;quot; you probably want to leave this optimization on.&lt;/span&gt;
-    enabled: false
-  hook:
-    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# I&amp;#39;ve got a bunch of images that I use rarely and&lt;/span&gt;
-    &lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# in &amp;quot;real life&amp;quot; you probably want to leave this optimization on.&lt;/span&gt;
-    enabled: false&lt;/code&gt;&lt;/pre&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Being root again&lt;/span&gt;
+USER root
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# A script to ignore everything we tell it. I&amp;#39;m sure that&amp;#39;s useful&lt;/span&gt;
+COPY scripts/jupyter-fake-launch.sh  ./polynote/
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Copy config file&lt;/span&gt;
+COPY --chown&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;:&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt; docker/jupyter/config.yml /config.yml
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Back to being a safe-ish user&lt;/span&gt;
+USER &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Use our custom launch script&lt;/span&gt;
+&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [&amp;quot;./polynote/jupyter-fake-launch.sh&amp;quot;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;Most of the magic is inside &lt;code&gt;preSpawnHook&lt;/code&gt;. This also uses the &lt;code&gt;z2jh&lt;/code&gt; library to allow it to load the config in &lt;code&gt;custom.users&lt;/code&gt; in the YAML file. You could also point this to a database or something else, but given I&amp;#8217;ve got about three users I figured in-line YAML was good enough for my case.&lt;/p&gt;
+&lt;p&gt;Polynote is configured by a config.yml file, and ZeroToJupyterHub mounts the user storage at /home/joyvan &amp;amp; expects the server to be listening on port 8888 (instead of Polynotes default of 8192). So I added a config.yml of&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;listen:
+  host: 0.0.0.0
+  port: 8888
+storage:
+  dir: /home/jovyan&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;I&amp;#8217;d like to thank &lt;a href=&quot;https://github.com/consideRatio&quot;&gt;consideRatio&lt;/a&gt; for all his help, to be clear any mistakes are my own fault.&lt;/p&gt;
-&lt;/div&gt;</content><author><name></name></author><summary type="html">While we&amp;#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&amp;#8217;t accidentally stomp on each-others work.</summary></entry><entry><title type="html">A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask</title><link href="https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio.html" rel="alternate" type="text/html" title="A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask" /><published>2021-06-29T00:00:00-07:00</published><updated>2021-06-29T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio.html">= A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask
+&lt;p&gt;ZeroToJupyterHub is designed to launch JupyterHub containers and so it passes some command-line arguments as expected by JupyterHub. The simplest option I could think of was to create a script that ignored most of the information from JupyterHub and reformatted the other arguments as needed.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#!/usr/bin/env bash&lt;/span&gt;
+&lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -ex
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Ignore everything the Jupyter launcher tells us&lt;/span&gt;
+cp -r /opt/notebooks/examples /home/jovyan/ &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Examples copied&amp;quot;&lt;/span&gt;
+&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Use the JUPYTERHUB_SERVICE_PREFIX as the base_uri since we need to match the reverse proxy set up by zero-to-jupyterhub.&lt;/span&gt;
+&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;
+&lt;span style=&quot;color: #BA2121&quot;&gt;ui:&lt;/span&gt;
+&lt;span style=&quot;color: #BA2121&quot;&gt;  base_uri: &lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JUPYTERHUB_SERVICE_PREFIX&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&lt;/span&gt;
+&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; /config.yml
+./polynote/polynote.py --config /config.yml&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Unfortunately, while Polynote has support for being served by reverse proxies at sub-urls it makes the assumption that the reverse proxy is always rewriting the requests to be relative to &quot;/&quot;. Fixing this required adding a new function (normalizePath) which was relatively straightforward, although I did screw up putting it in all of the right places which led me to a lot of confusion (and is honestly part of why it was an 8 part stream).&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;scala&quot;&gt;&lt;span&gt;&lt;/span&gt;    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;def&lt;/span&gt; normalizePath&lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;path&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;:&lt;/span&gt; &lt;span style=&quot;color: #B00040&quot;&gt;String&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;:&lt;/span&gt; &lt;span style=&quot;color: #B00040&quot;&gt;String&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;{&lt;/span&gt;
+      path&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;stripPrefix&lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;userPrefix&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
+    &lt;span style=&quot;color: #666666&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;All in all the (not very nice, but serviceable) integration is on my &lt;a href=&quot;https://github.com/holdenk/polynote/tree/integrate-with-zero-to-jupyterhub&quot;&gt;GitHub Polynote integrate-with-zero-to-jupyterhub branch&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In addition, while I was working on this I found various issues with the Polynote Dockerfile and build instructions not being in sync. This is pretty normal, but since I was new to the project I took several miss-steps, but I&amp;#8217;ve submitted some PRs (including some merged) to clarify the issues for others.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;While it&amp;#8217;s possible to launch the Polynote notebooks there is still a lot of work to be done. First off is there is no security once the notebook is launched, and the second matter is including the traditional JupyterHub header so the user can stop &amp;amp; restart their Polynote environment as desired.&lt;/p&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp;amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp;amp; Python), I figured I&amp;#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&amp;#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don&amp;#8217;t have security set up.</summary></entry><entry><title type="html">Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes</title><link href="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html" rel="alternate" type="text/html" title="Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes" /><published>2021-06-30T00:00:00-07:00</published><updated>2021-06-30T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html">= Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes
+
+While we've already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don't accidentally stomp on each-others work.
+
+
+In Kubernetes the main way of doing this is with service accounts and secrets.
+While we can configure this globally, configuring this per-user needs a bit of custom code.
+
+
+[source, yaml]
+----
+include::../subrepos/scalingpythonml/jupyter/multiuser.yaml[]
+----
+
+
+Most of the magic is inside `preSpawnHook`. This also uses the `z2jh` library to allow it to load the config in `custom.users` in the YAML file. You could also point this to a database or something else, but given I've got about three users I figured in-line YAML was good enough for my case.
+
+
+I'd like to thank https://github.com/consideRatio[consideRatio] for all his help, to be clear any mistakes are my own fault.</content><author><name></name></author><summary type="html">While we&amp;#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&amp;#8217;t accidentally stomp on each-others work.</summary></entry><entry><title type="html">A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask</title><link href="https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio.html" rel="alternate" type="text/html" title="A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask" /><published>2021-06-29T00:00:00-07:00</published><updated>2021-06-29T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/29/a-quick-look-at-df-io-basic-etl-w-json-over-http-to-csv-and-parquet-on-minio.html">= A Quick Look at DF I/O (basic ETL w/JSON over http to CSV and Parquet on MinIO) in Dask
 
 Now that we've got Dask installed, it's time to try some simple data preparation and extract, transform, load(ETL). While ETL is often not the most exciting thing, getting data is the first step of most adventures. Data tools don't exist in a vacuum; the data normally comes from somewhere else, and the data or models we make need to be useable with other tools. Because of this, the formats and systems that a tool can interact with can make a difference between it being a fit or needing to keep looking. To simplify your life with I/O, you should make sure your notebook (or client) runs inside the same cluster as the workers.
 
@@ -1152,41 +1125,4 @@ Up next, I'll start exploring how the different tools work in this environment. 
 
 This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I'm involved with. I am one of the developers of Apache Spark and have [some books published on the topic](https://amzn.to/2O6KYYH) that may influence my views, but my views do not represent the project.
 
-In as much as possible, I've used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry><entry><title type="html">A First (Brief) Look at Ray on Kubernetes</title><link href="https://scalingpythonml.com/2020/08/16/poke-at-ray.html" rel="alternate" type="text/html" title="A First (Brief) Look at Ray on Kubernetes" /><published>2020-08-16T00:00:00-07:00</published><updated>2020-08-16T00:00:00-07:00</updated><id>https://scalingpythonml.com/2020/08/16/poke-at-ray</id><content type="html" xml:base="https://scalingpythonml.com/2020/08/16/poke-at-ray.html">After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same[^lab] research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) -- and as someone who's spent way more time than she would like getting the JVM and Python to play together, Ray and it's cohort seem quite promising.
-
-This blog does not represent any of my employers, past or present, and does not represent any of the software projects or foundations I'm involved with. I am one of the developers of Apache Spark [and have some books published on the topic](https://amzn.to/2O6KYYH) that may influence my views, but my views do not represent the project.
-
-## Installing Ray
-
-[Installing Ray](https://docs.ray.io/en/latest/installation.html) was fairly simple, especially due to its lack of JVM dependencies. The one weird thing I encountered while I was installing Ray is the fact that its developers decided to &quot;vendor&quot; Apache Arrow. This was disappointing because I'm interested in using Arrow to get some of these tools to play together and vendored libraries could make it a bit harder. I filed an issue with the ray-project folks, and they quickly responded that they were working on it and then resolved it, so this is something I want to come back to.
-
-## Running Ray on K8s
-
-Since I had not yet built my dedicated test cluster, I decided to give Ray on Kubernetes a shot. The documentation had some room for improvement and I got lost a few times along the way, but on my second try a few days later using the nightly builds I managed to get it running.
-
-## Fault Tolerance
-
-Fault tolerance is especially important in distributed systems like Spark and Ray since as we add more and more computers the chance of one of them failing, or having the network between them fail increases. Different distributed systems take different approaches to fault tolerance, Map-Reduce achieves its fault tolerance by using distributed persistent storage and Spark uses recompute on failures.[^fault_tol]
-
-## Fault Tolerance Limitations
-
-One of the things that really excites me about Ray is its actor model for state. This is really important for some machine learning algorithms, and in Spark, our limitations around handling state (like model weights) have made streaming machine learning algorithms very challenging. One of the big reasons for the limitations around how state is handled is fault tolerance.
-
-To simulate a failure I created an actor and then killed the pod that was running the actor. Ray did not seem to have any automatic recovery here, which could be the right answer. In the future, I want to experiment and see if there is a way to pair Ray with a durable distributed database (or another system) to allow the recovery of actors.
-
-
-I want to be clear: This is about the same as in Spark. Spark only[^spark_state] allows state to accrue on the driver, and recovery of state on the failure of the driver requires some additional custom code.
-
-## What's next?
-
-The ray-project looks really interesting. Along with Dask and other new Python-first tools we're entering a new era of options for scaling our Python ML code. Seeing Apache Arrow inside of Ray is reassuring since one of my considerations is how we can make our tools work together, and I think Arrow has the potential to serve as a bridge between the different parts of our ecosystem. Up next I'm going to try and set up Dask on my new K8s cluster, and then also re-create this initial experiment on physical hardware instead of Minikube. If you've got thoughts or suggestions for what you'd like to see next, please do send me an e-mail and file an issue against the webpage on GitHub.
-
-You can also follow along with my streams around [distributed computing and open-source on my YouTube channel](https://www.youtube.com/user/holdenkarau). The two videos for this post are [Installing &amp; Poking at Ray](https://www.youtube.com/watch?v=WBNmF-wyAlE) and [Trying the Ray Project on Kubernetes](https://www.youtube.com/watch?v=IUI5okVvgbQ).
-
-If your interested in learning more about Ray and don't want to wait for me, there is a [great collection of tutorials in the project](https://github.com/ray-project/).
-
-[^lab]: Well… same-ish. It's technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you'll notice a lot of overlap.
-
-[^fault_tol]: Technically it's a bit more complicated, and Spark can use a hybrid of these two models. In some internal places (like it's ALS implementation and other iterative algorithms), Spark uses distributed persistent storage for fault tolerance.
-
-[^spark_state]: Streaming Spark is a bit different</content><author><name></name></author><summary type="html">After my motorcycle/Vespa crash last year I took some time away from work. While I was out and trying to practice getting my typing speed back up, I decided to play with Ray, which was pretty cool. Ray comes out of the same1 research lab that created the initial work that became the basis of Apache Spark. Like Spark, the primary authors have now started a company (Anyscale) to grow Ray. Unlike Spark, Ray is a Python first library and does not depend on the Java Virtual Machine (JVM) – and as someone who’s spent way more time than she would like getting the JVM and Python to play together, Ray and it’s cohort seem quite promising. Well… same-ish. It’s technically a bit more complicated because of the way the professors choose to run their labs, but if you look at the advisors you’ll notice a lot of overlap. &amp;#8617;</summary></entry></feed>
+In as much as possible, I've used a common cluster environment for testing these different tools, although some parts have been easier to test out on Minikube.</content><author><name></name></author><summary type="html">To ensure that the results between tests are as comparable as possible, I’m using a consistent hardware setup whenever possible. Rather than use a cloud provider I (with the help of Nova) set up a rack with a few different nodes. Using my own hardware allows me to avoid the noisy neighbor problem with any performance numbers and gives me more control over simulating network partitions. A downside is that the environment is not as easily re-creatable.</summary></entry></feed>
