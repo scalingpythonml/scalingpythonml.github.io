@@ -1,73 +1,83 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2021-07-06T22:00:02-07:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)</title><link href="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html" rel="alternate" type="text/html" title="Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)" /><published>2021-07-06T00:00:00-07:00</published><updated>2021-07-06T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish</id><content type="html" xml:base="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html">&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp;amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp;amp; Python), I figured I&amp;#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&amp;#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don&amp;#8217;t have security set up.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;The first step I did was creating a new Dockerfile for JupyterHub to launch so that we could put any customizations needed inside of it. We could view this Dockerfile as &quot;foreshadowing&quot; for the other changes I&amp;#8217;m going to describe:&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;listingblock&quot;&gt;
-&lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;dockerfile&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;FROM&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; holdenk/polynote:dev&lt;/span&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://scalingpythonml.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://scalingpythonml.com/" rel="alternate" type="text/html" /><updated>2021-07-06T22:11:00-07:00</updated><id>https://scalingpythonml.com/feed.xml</id><title type="html">Scaling Python ML</title><subtitle>Blog of my adventures working with different tools for scaling Python ML workloads.</subtitle><entry><title type="html">Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)</title><link href="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html" rel="alternate" type="text/html" title="Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)" /><published>2021-07-06T00:00:00-07:00</published><updated>2021-07-06T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish</id><content type="html" xml:base="https://scalingpythonml.com/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html">= Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)
 
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Being root again&lt;/span&gt;
+JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp; Python), I figured I'd try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I'm using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don't have security set up.
+
+
+
+The first step I did was creating a new Dockerfile for JupyterHub to launch so that we could put any customizations needed inside of it. We could view this Dockerfile as &quot;foreshadowing&quot; for the other changes I'm going to describe:
+
+
+[source, dockerfile]
+----
+FROM holdenk/polynote:dev
+
+# Being root again
 USER root
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# A script to ignore everything we tell it. I&amp;#39;m sure that&amp;#39;s useful&lt;/span&gt;
+# A script to ignore everything we tell it. I'm sure that's useful
 COPY scripts/jupyter-fake-launch.sh  ./polynote/
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Copy config file&lt;/span&gt;
-COPY --chown&lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;:&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt; docker/jupyter/config.yml /config.yml
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Back to being a safe-ish user&lt;/span&gt;
-USER &lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;${&lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;NB_USER&lt;/span&gt;&lt;span style=&quot;color: #BB6688; font-weight: bold&quot;&gt;}&lt;/span&gt;
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Use our custom launch script&lt;/span&gt;
-&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;ENTRYPOINT&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt; [&amp;quot;./polynote/jupyter-fake-launch.sh&amp;quot;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;Polynote is configured by a config.yml file, and ZeroToJupyterHub mounts the user storage at /home/joyvan &amp;amp; expects the server to be listening on port 8888 (instead of Polynotes default of 8192). So I added a config.yml of&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;listingblock&quot;&gt;
-&lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;yaml&quot;&gt;&lt;span&gt;&lt;/span&gt;listen:
+# Copy config file
+COPY --chown=${NB_USER}:${NB_USER} docker/jupyter/config.yml /config.yml
+# Back to being a safe-ish user
+USER ${NB_USER}
+# Use our custom launch script
+ENTRYPOINT [&quot;./polynote/jupyter-fake-launch.sh&quot;]
+----
+
+
+
+Polynote is configured by a config.yml file, and ZeroToJupyterHub mounts the user storage at /home/joyvan &amp; expects the server to be listening on port 8888 (instead of Polynotes default of 8192). So I added a config.yml of
+
+
+[source, yaml]
+----
+listen:
   host: 0.0.0.0
   port: 8888
 storage:
-  dir: /home/jovyan&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;ZeroToJupyterHub is designed to launch JupyterHub containers and so it passes some command-line arguments as expected by JupyterHub. The simplest option I could think of was to create a script that ignored most of the information from JupyterHub and reformatted the other arguments as needed.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;listingblock&quot;&gt;
-&lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;#!/usr/bin/env bash&lt;/span&gt;
-&lt;span style=&quot;color: #008000&quot;&gt;set&lt;/span&gt; -ex
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Ignore everything the Jupyter launcher tells us&lt;/span&gt;
-cp -r /opt/notebooks/examples /home/jovyan/ &lt;span style=&quot;color: #666666&quot;&gt;||&lt;/span&gt; &lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;Examples copied&amp;quot;&lt;/span&gt;
-&lt;span style=&quot;color: #408080; font-style: italic&quot;&gt;# Use the JUPYTERHUB_SERVICE_PREFIX as the base_uri since we need to match the reverse proxy set up by zero-to-jupyterhub.&lt;/span&gt;
-&lt;span style=&quot;color: #008000&quot;&gt;echo&lt;/span&gt; &lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt;
-&lt;span style=&quot;color: #BA2121&quot;&gt;ui:&lt;/span&gt;
-&lt;span style=&quot;color: #BA2121&quot;&gt;  base_uri: &lt;/span&gt;&lt;span style=&quot;color: #19177C&quot;&gt;$JUPYTERHUB_SERVICE_PREFIX&lt;/span&gt;&lt;span style=&quot;color: #BA2121&quot;&gt;&lt;/span&gt;
-&lt;span style=&quot;color: #BA2121&quot;&gt;&amp;quot;&lt;/span&gt; &amp;gt;&amp;gt; /config.yml
-./polynote/polynote.py --config /config.yml&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;Unfortunately, while Polynote has support for being served by reverse proxies at sub-urls it makes the assumption that the reverse proxy is always rewriting the requests to be relative to &quot;/&quot;. Fixing this required adding a new function (normalizePath) which was relatively straightforward, although I did screw up putting it in all of the right places which led me to a lot of confusion (and is honestly part of why it was an 8 part stream).&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;listingblock&quot;&gt;
-&lt;div class=&quot;content&quot;&gt;
-&lt;pre class=&quot;pygments highlight&quot; style=&quot;background: #f8f8f8;&quot;&gt;&lt;code data-lang=&quot;scala&quot;&gt;&lt;span&gt;&lt;/span&gt;    &lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;def&lt;/span&gt; normalizePath&lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;path&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;:&lt;/span&gt; &lt;span style=&quot;color: #B00040&quot;&gt;String&lt;/span&gt;&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;&lt;span style=&quot;color: #008000; font-weight: bold&quot;&gt;:&lt;/span&gt; &lt;span style=&quot;color: #B00040&quot;&gt;String&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color: #666666&quot;&gt;{&lt;/span&gt;
-      path&lt;span style=&quot;color: #666666&quot;&gt;.&lt;/span&gt;stripPrefix&lt;span style=&quot;color: #666666&quot;&gt;(&lt;/span&gt;userPrefix&lt;span style=&quot;color: #666666&quot;&gt;)&lt;/span&gt;
-    &lt;span style=&quot;color: #666666&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;All in all the (not very nice, but serviceable) integration is on my &lt;a href=&quot;https://github.com/holdenk/polynote/tree/integrate-with-zero-to-jupyterhub&quot;&gt;GitHub Polynote integrate-with-zero-to-jupyterhub branch&lt;/a&gt;.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;In addition, while I was working on this I found various issues with the Polynote Dockerfile and build instructions not being in sync. This is pretty normal, but since I was new to the project I took several miss-steps, but I&amp;#8217;ve submitted some PRs (including some merged) to clarify the issues for others.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class=&quot;paragraph&quot;&gt;
-&lt;p&gt;While it&amp;#8217;s possible to launch the Polynote notebooks there is still a lot of work to be done. First off is there is no security once the notebook is launched, and the second matter is including the traditional JupyterHub header so the user can stop &amp;amp; restart their Polynote environment as desired.&lt;/p&gt;
-&lt;/div&gt;</content><author><name></name></author><summary type="html">JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp;amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp;amp; Python), I figured I&amp;#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&amp;#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don&amp;#8217;t have security set up.</summary></entry><entry><title type="html">Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes</title><link href="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html" rel="alternate" type="text/html" title="Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes" /><published>2021-06-30T00:00:00-07:00</published><updated>2021-06-30T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html">= Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes
+  dir: /home/jovyan
+----
+
+
+ZeroToJupyterHub is designed to launch JupyterHub containers and so it passes some command-line arguments as expected by JupyterHub. The simplest option I could think of was to create a script that ignored most of the information from JupyterHub and reformatted the other arguments as needed.
+
+
+[source,bash]
+----
+#!/usr/bin/env bash
+set -ex
+# Ignore everything the Jupyter launcher tells us
+cp -r /opt/notebooks/examples /home/jovyan/ || echo &quot;Examples copied&quot;
+# Use the JUPYTERHUB_SERVICE_PREFIX as the base_uri since we need to match the reverse proxy set up by zero-to-jupyterhub.
+echo &quot;
+ui:
+  base_uri: $JUPYTERHUB_SERVICE_PREFIX
+&quot; &gt;&gt; /config.yml
+./polynote/polynote.py --config /config.yml
+----
+
+
+
+Unfortunately, while Polynote has support for being served by reverse proxies at sub-urls it makes the assumption that the reverse proxy is always rewriting the requests to be relative to &quot;/&quot;. Fixing this required adding a new function (normalizePath) which was relatively straightforward, although I did screw up putting it in all of the right places which led me to a lot of confusion (and is honestly part of why it was an 8 part stream).
+
+
+[source, scala]
+----
+    def normalizePath(path: String): String = {
+      path.stripPrefix(userPrefix)
+    }
+----
+
+
+
+All in all the (not very nice, but serviceable) integration is on my https://github.com/holdenk/polynote/tree/integrate-with-zero-to-jupyterhub[GitHub Polynote integrate-with-zero-to-jupyterhub branch].
+
+
+
+In addition, while I was working on this I found various issues with the Polynote Dockerfile and build instructions not being in sync. This is pretty normal, but since I was new to the project I took several miss-steps, but I've submitted some PRs (including some merged) to clarify the issues for others.
+
+
+
+While it's possible to launch the Polynote notebooks there is still a lot of work to be done. First off is there is no security once the notebook is launched, and the second matter is including the traditional JupyterHub header so the user can stop &amp; restart their Polynote environment as desired.</content><author><name></name></author><summary type="html">JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp;amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp;amp; Python), I figured I&amp;#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&amp;#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would &quot;take an hour or so&quot; it ended up being an 8 part stream, and I don&amp;#8217;t have security set up.</summary></entry><entry><title type="html">Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes</title><link href="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html" rel="alternate" type="text/html" title="Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes" /><published>2021-06-30T00:00:00-07:00</published><updated>2021-06-30T00:00:00-07:00</updated><id>https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub</id><content type="html" xml:base="https://scalingpythonml.com/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html">= Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes
 
 While we've already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don't accidentally stomp on each-others work.
 

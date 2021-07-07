@@ -103,10 +103,17 @@ if(!(window.doNotTrack === "1" || navigator.doNotTrack === "1" || navigator.doNo
 
 <h2 id="scaling-python-ml">Scaling Python ML</h2>
 <h2 class="post-list-heading">Posts</h2>
-    <ul class="post-list"><li><span class="post-meta">Jun 30, 2021</span>
+    <ul class="post-list"><li><span class="post-meta">Jul 6, 2021</span>
+        <h3>
+          <a class="post-link" href="/2021/07/06/initial-steps-getting-polynote-and-zero-to-jupyterhub-to-work-together-ish.html">
+            Initial Steps at Getting polynote and ZeroToJupyterHub to work together (ish)
+          </a>
+        </h3><div class="paragraph">
+<p>JupyterHub has long been the de facto leader in the notebook space. Polynote is a new approach to notebooks with multi-language kernels and a focus on first-class Scala support. There is a lot of tooling to make deploying &amp; managing JupyterHub easy for various environments. Since Polynote is relatively new, the same tooling does not yet exist. Since I am lazy, and I wanted a great Notebook for Spark (w/ Scala &amp; Python), I figured I&#8217;d try and see if I could get my ZeroToJupyterHub deployment to launch a Polynote notebook. This way I can have multi-user Kubernetes deployments of Polynote alongside my other Kernels that I&#8217;m using (Python w/Dask, Python w/Ray, etc.). It turns out, yes it is possible, and there are of course some things I learned along the way and despite my initial thought this would "take an hour or so" it ended up being an 8 part stream, and I don&#8217;t have security set up.</p>
+</div></li><li><span class="post-meta">Jun 30, 2021</span>
         <h3>
           <a class="post-link" href="/2021/06/30/setting-up-per-user-creds-with-zero-to-jupyterhub.html">
-            Setting up Per User Secrets &amp;amp; other customizations with Jupyterhub on Kubernetes
+            Setting up Per User Secrets and other customizations with Jupyterhub on Kubernetes
           </a>
         </h3><div class="paragraph">
 <p>While we&#8217;ve already set up Jupyterhub using zero-to-jupyterhub on Kubernetes, I wanted to expand access to my other prospective co-authors as part of trying to convince them to write with me (again) :). While I generally speaking trust my co-authors, I still like having some kind of access controls, so we don&#8217;t accidentally stomp on each-others work.</p>
